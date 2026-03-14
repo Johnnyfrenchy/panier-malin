@@ -83,7 +83,7 @@
     });
     window._fb = { auth:getAuth(app), db:getFirestore(app), signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp };
 </script>
-<script type="text/babel" data-presets="react">
+<script type="text/babel">
 const { useState, useEffect, useMemo, useRef } = React;
 const fmt = n => new Intl.NumberFormat('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const calcDelta = (cur,last) => (!last||last===0||cur===last)?null:((cur-last)/last*100).toFixed(1);
