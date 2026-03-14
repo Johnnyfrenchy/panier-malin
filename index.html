@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -8,161 +9,559 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
-        .animate-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    </style>
+        :root {
+            --bg: #0c0c0e;
+            --surface: #131316;
+            --surface2: #1a1a1f;
+            --border: #242428;
+            --accent: #b8f94a;
+            --accent-dim: rgba(184,249,74,0.12);
+            --accent-glow: rgba(184,249,74,0.25);
+            --text: #e8e8ec;
+            --muted: #5a5a65;
+            --danger: #ff4d4d;
+            --danger-dim: rgba(255,77,77,0.12);
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        .mono { font-family: 'DM Mono', monospace; }
+        .syne { font-family: 'Syne', sans-serif; }
+
+```
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Animations */
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse-accent {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    @keyframes scanline {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100vh); }
+    }
+
+    .fade-up { animation: fadeUp 0.25s ease-out both; }
+    .spin { animation: spin 1s linear infinite; }
+    .pulse-accent { animation: pulse-accent 1.5s ease-in-out infinite; }
+
+    /* Nav */
+    .nav-bar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        display: flex;
+        z-index: 100;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        padding: 10px 0 8px;
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        transition: color 0.15s;
+        position: relative;
+        cursor: pointer;
+        border: none;
+        background: none;
+    }
+    .nav-btn.active {
+        color: var(--accent);
+    }
+    .nav-btn.active::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 25%; right: 25%;
+        height: 2px;
+        background: var(--accent);
+        border-radius: 0 0 2px 2px;
+    }
+    .nav-badge {
+        position: absolute;
+        top: 6px; right: calc(50% - 18px);
+        background: var(--danger);
+        color: white;
+        font-size: 9px;
+        font-weight: 700;
+        width: 16px; height: 16px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        border: 2px solid var(--surface);
+    }
+
+    /* Cards */
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+    }
+    .card-tight {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+
+    /* Input */
+    .inp {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        padding: 10px 14px;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        width: 100%;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+    .inp:focus { border-color: var(--accent); }
+    .inp::placeholder { color: var(--muted); }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    /* Buttons */
+    .btn-accent {
+        background: var(--accent);
+        color: #0c0c0e;
+        font-weight: 700;
+        font-size: 13px;
+        border: none;
+        border-radius: 10px;
+        padding: 11px 20px;
+        cursor: pointer;
+        transition: opacity 0.15s, transform 0.1s;
+        letter-spacing: 0.02em;
+    }
+    .btn-accent:active { transform: scale(0.97); opacity: 0.85; }
+
+    .btn-ghost {
+        background: var(--surface2);
+        color: var(--text);
+        font-weight: 500;
+        font-size: 13px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 11px 20px;
+        cursor: pointer;
+        transition: border-color 0.15s;
+    }
+    .btn-ghost:hover { border-color: var(--muted); }
+
+    /* Product row */
+    .product-row {
+        display: flex;
+        align-items: center;
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--border);
+        gap: 10px;
+        transition: background 0.1s;
+    }
+    .product-row:last-child { border-bottom: none; }
+    .product-row:active { background: var(--surface2); }
+
+    .check-btn {
+        width: 28px; height: 28px;
+        border-radius: 8px;
+        border: 1.5px solid var(--border);
+        background: none;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: all 0.15s;
+    }
+    .check-btn.checked {
+        background: var(--accent);
+        border-color: var(--accent);
+    }
+
+    /* Price tag */
+    .price-tag {
+        font-family: 'DM Mono', monospace;
+        font-size: 13px;
+        color: var(--accent);
+        background: var(--accent-dim);
+        padding: 3px 8px;
+        border-radius: 6px;
+    }
+
+    /* Scanner */
+    .scan-drop {
+        border: 1.5px dashed var(--border);
+        border-radius: 20px;
+        padding: 48px 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        transition: border-color 0.2s;
+        cursor: pointer;
+    }
+    .scan-drop:hover { border-color: var(--accent); }
+
+    .scan-icon-wrap {
+        width: 72px; height: 72px;
+        border-radius: 20px;
+        background: var(--accent-dim);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--accent);
+    }
+
+    /* Scanning overlay */
+    .scan-overlay {
+        position: absolute; inset: 0;
+        background: rgba(12,12,14,0.7);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 12px;
+        border-radius: 16px;
+    }
+    .scan-preview {
+        position: relative;
+        width: 100%;
+        height: 220px;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #000;
+    }
+    .scan-preview img {
+        width: 100%; height: 100%;
+        object-fit: cover;
+        opacity: 0.5;
+    }
+
+    /* Stats */
+    .stat-block {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+    }
+    .stat-amount {
+        font-family: 'Syne', sans-serif;
+        font-size: 48px;
+        font-weight: 800;
+        color: var(--accent);
+        line-height: 1;
+        letter-spacing: -0.02em;
+    }
+
+    /* Shopping total */
+    .total-bar {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px 18px;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+    }
+
+    /* Qty control */
+    .qty-ctrl {
+        display: flex;
+        align-items: center;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .qty-btn {
+        width: 28px; height: 28px;
+        display: flex; align-items: center; justify-content: center;
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        transition: color 0.1s;
+    }
+    .qty-btn:active { color: var(--accent); }
+    .qty-val {
+        font-family: 'DM Mono', monospace;
+        font-size: 13px;
+        min-width: 24px;
+        text-align: center;
+    }
+
+    /* Receipt row */
+    .receipt-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
+    }
+    .receipt-row:last-child { border-bottom: none; }
+
+    /* Header */
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+    .page-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+
+    /* Chip */
+    .chip {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 5px;
+        background: var(--surface2);
+        color: var(--muted);
+        border: 1px solid var(--border);
+    }
+    .chip.accent {
+        background: var(--accent-dim);
+        color: var(--accent);
+        border-color: rgba(184,249,74,0.2);
+    }
+
+    /* Inline price input */
+    .price-inp {
+        background: transparent;
+        border: none;
+        font-family: 'DM Mono', monospace;
+        font-size: 13px;
+        color: var(--accent);
+        width: 64px;
+        text-align: right;
+        outline: none;
+        padding: 3px 6px;
+        border-radius: 6px;
+        transition: background 0.15s;
+    }
+    .price-inp:focus {
+        background: var(--accent-dim);
+    }
+
+    /* Delete */
+    .del-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        transition: color 0.15s, background 0.15s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .del-btn:hover { color: var(--danger); background: var(--danger-dim); }
+
+    /* Scan result item */
+    .scan-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+    }
+    .scan-item:last-child { border-bottom: none; }
+
+    /* Loader */
+    .loader-ring {
+        width: 40px; height: 40px;
+        border: 2.5px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    /* Scrollable results */
+    .results-scroll {
+        max-height: 280px;
+        overflow-y: auto;
+    }
+</style>
+```
+
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body>
     <div id="root"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+```
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDQ2qyBeT_iLuCF3UEmQ2S93z8Qlv6uJSI",
-            authDomain: "panier-malin-c8c25.firebaseapp.com",
-            projectId: "panier-malin-c8c25",
-            storageBucket: "panier-malin-c8c25.firebasestorage.app",
-            messagingSenderId: "372069346066",
-            appId: "1:372069346066:web:2ae414eff4b637ac5b21cb"
+    const firebaseConfig = {
+        apiKey: "AIzaSyDQ2qyBeT_iLuCF3UEmQ2S93z8Qlv6uJSI",
+        authDomain: "panier-malin-c8c25.firebaseapp.com",
+        projectId: "panier-malin-c8c25",
+        storageBucket: "panier-malin-c8c25.firebasestorage.app",
+        messagingSenderId: "372069346066",
+        appId: "1:372069346066:web:2ae414eff4b637ac5b21cb"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    window.firebase = { auth, db, signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy };
+</script>
+
+<script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // ─── Icons ───────────────────────────────────────────────────────────────
+    const Icon = ({ name, size = 20, style = {} }) => {
+        const paths = {
+            grid:     <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
+            list:     <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9l6 0M9 12l6 0M9 15l3 0"/></>,
+            camera:   <><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>,
+            chart:    <><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></>,
+            plus:     <path d="M12 5v14M5 12h14"/>,
+            minus:    <path d="M5 12h14"/>,
+            trash:    <><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6m4-6v6"/></>,
+            check:    <path d="M5 12l4 4 10-10"/>,
+            x:        <path d="M18 6 6 18M6 6l12 12"/>,
+            bag:      <><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></>,
+            ok:       <><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></>,
+            trend:    <path d="m22 7-8.5 8.5-5-5L2 17m14-10h6v6"/>,
+            receipt:  <><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M16 8H8m8 4H8m8 4H8"/></>,
+        };
+        return (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
+                {paths[name]}
+            </svg>
+        );
+    };
+
+    // ─── Config ───────────────────────────────────────────────────────────────
+    const GEMINI_KEY = "AIzaSyAuArHz7LW2h9qF78k2fEEjBhEagPDOtjI";
+    const GEMINI_MODEL = "gemini-1.5-flash";
+    const APP_ID = "panier-malin-prod";
+
+    // ─── App ──────────────────────────────────────────────────────────────────
+    const App = () => {
+        const [user, setUser]           = useState(null);
+        const [view, setView]           = useState('catalogue');
+        const [products, setProducts]   = useState([]);
+        const [receipts, setReceipts]   = useState([]);
+        const [loading, setLoading]     = useState(true);
+        const [isScanning, setIsScanning] = useState(false);
+        const [scanResult, setScanResult] = useState(null);
+        const [previewUrl, setPreviewUrl] = useState(null);
+        const [newItem, setNewItem]     = useState({ name: '', price: '' });
+        const [search, setSearch]       = useState('');
+        const fileRef = useRef();
+
+        // Firebase auth
+        useEffect(() => {
+            if (!window.firebase) return;
+            const { auth, onAuthStateChanged, signInAnonymously } = window.firebase;
+            signInAnonymously(auth).catch(console.error);
+            return onAuthStateChanged(auth, u => { setUser(u); if (!u) setLoading(false); });
+        }, []);
+
+        // Firestore listeners
+        useEffect(() => {
+            if (!user || !window.firebase) return;
+            const { db, collection, onSnapshot } = window.firebase;
+            const base = `artifacts/${APP_ID}/users/${user.uid}`;
+            const u1 = onSnapshot(collection(db, base, 'products'), snap => {
+                setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                setLoading(false);
+            }, () => setLoading(false));
+            const u2 = onSnapshot(collection(db, base, 'receipts'), snap => {
+                setReceipts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            });
+            return () => { u1(); u2(); };
+        }, [user]);
+
+        // ── Firestore helpers ─────────────────────────────────────────────────
+        const dbPath = (...parts) => {
+            const { db, doc } = window.firebase;
+            return doc(db, 'artifacts', APP_ID, 'users', user.uid, ...parts);
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        window.firebase = { auth, db, signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy };
-    </script>
-
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-
-        const Icon = ({ name, size = 24, className = "" }) => {
-            const icons = {
-                Plus: <path d="M12 5v14M5 12h14" />,
-                Minus: <path d="M5 12h14" />,
-                Trash2: <><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><path d="M10 11v6m4-6v6" /></>,
-                ShoppingCart: <><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></>,
-                TrendingUp: <path d="m22 7-8.5 8.5-5-5L2 17m14-10h6v6" />,
-                LayoutDashboard: <><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></>,
-                ListTodo: <><rect width="18" height="18" x="3" y="3" rx="2" /><path d="m9 10 2 2 4-4m-6 8h6" /></>,
-                Camera: <><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></>,
-                Upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m14-7-5-5-5 5m5-5v12" /></>,
-                Loader2: <path d="M21 12a9 9 0 1 1-6.219-8.56" />,
-                CheckCircle2: <><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" /><path d="m9 12 2 2 4-4" /></>,
-                X: <path d="M18 6 6 18M6 6l12 12" />,
-                Cloud: <path d="M17.5 19c3.037 0 5.5-2.463 5.5-5.5 0-2.799-2.078-5.112-4.781-5.446C17.417 4.881 14.72 3 12 3 9.432 3 7.154 4.604 6.273 6.945A5 5 0 0 0 2 11.5c0 2.761 2.239 5 5 5h10.5" />,
-                PieChart: <><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></>,
-                Calendar: <><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></>,
-                ShieldCheck: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4" />,
-                Download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" />
-            };
-            return (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${className} ${name === 'Loader2' ? 'animate-spin' : ''}`}>
-                    {icons[name]}
-                </svg>
-            );
+        const updateProd = (id, fields) => window.firebase.updateDoc(dbPath('products', id), fields);
+        const deleteProd = (id) => window.firebase.deleteDoc(dbPath('products', id));
+        const saveProd   = (p) => {
+            const id = p.id || Date.now().toString();
+            window.firebase.setDoc(dbPath('products', id), { ...p, id }, { merge: true });
+        };
+        const addReceipt = (data) => {
+            const { db, collection, addDoc, serverTimestamp } = window.firebase;
+            return addDoc(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'receipts'), {
+                ...data, timestamp: serverTimestamp()
+            });
         };
 
-        const apiKey = "AIzaSyAuArHz7LW2h9qF78k2fEEjBhEagPDOtjI"; 
-        const appId = "panier-malin-prod";
-
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [view, setView] = useState('inventory'); 
-            const [products, setProducts] = useState([]);
-            const [receipts, setReceipts] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [isScanning, setIsScanning] = useState(false);
-            const [scanResult, setScanResult] = useState(null);
-            const [previewUrl, setPreviewUrl] = useState(null);
-            const [newItem, setNewItem] = useState({ name: '', price: '', category: 'Épicerie' });
-
-            useEffect(() => {
-                if (!window.firebase) return;
-                const { auth, onAuthStateChanged, signInAnonymously } = window.firebase;
-                
-                signInAnonymously(auth).catch(e => {
-                    console.error("Auth error", e);
-                    if (e.code === 'auth/configuration-not-found') {
-                        alert("Erreur Firebase : Allez dans Authentication > Sign-in method et activez 'Anonyme'.");
-                    }
-                });
-
-                return onAuthStateChanged(auth, u => { setUser(u); if(!u && !loading) setLoading(false); });
-            }, []);
-
-            useEffect(() => {
-                if (!user || !window.firebase) return;
-                const { db, collection, onSnapshot } = window.firebase;
-                
-                const unsubProd = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'products'), (snap) => {
-                    const items = []; snap.forEach(d => items.push({ id: d.id, ...d.data() }));
-                    setProducts(items); setLoading(false);
-                }, () => setLoading(false));
-
-                const unsubRec = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'receipts'), (snap) => {
-                    const items = []; snap.forEach(d => items.push({ id: d.id, ...d.data() }));
-                    setReceipts(items);
-                });
-
-                return () => { unsubProd(); unsubRec(); };
-            }, [user]);
-
-            const handleUpdate = (id, fields) => {
-                const { db, doc, updateDoc } = window.firebase;
-                updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'products', id), fields);
+        // ── Image resize ──────────────────────────────────────────────────────
+        const resizeImage = (file) => new Promise(resolve => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = e => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 1200;
+                    const scale = MAX / img.width;
+                    canvas.width = MAX;
+                    canvas.height = img.height * scale;
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                };
             };
+        });
 
-            const handleSave = (p) => {
-                const id = p.id || Date.now().toString();
-                const { db, doc, setDoc } = window.firebase;
-                setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'products', id), { ...p, id }, { merge: true });
-            };
-
-            const resizeImage = (file) => {
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = (e) => {
-                        const img = new Image();
-                        img.src = e.target.result;
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const MAX_WIDTH = 1200;
-                            const scale = MAX_WIDTH / img.width;
-                            canvas.width = MAX_WIDTH;
-                            canvas.height = img.height * scale;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            resolve(canvas.toDataURL('image/jpeg', 0.85));
-                        };
-                    };
-                });
-            };
-
-            const handleFileSelect = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                setIsScanning(true);
-                setPreviewUrl(URL.createObjectURL(file));
-                
-                try {
-                    const compressedBase64 = await resizeImage(file);
-                    const prompt = `Analyse ce ticket de caisse. Extrais chaque article avec son nom et son prix. Retourne UNIQUEMENT un JSON : { "items": [ { "name": "...", "price": 0.00 } ] }`;
-                    
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                        method: 'POST', 
+        // ── Gemini scan ───────────────────────────────────────────────────────
+        const handleFileSelect = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            setIsScanning(true);
+            setPreviewUrl(URL.createObjectURL(file));
+            setScanResult(null);
+            try {
+                const b64 = await resizeImage(file);
+                const prompt = `Analyse ce ticket de caisse. Extrais chaque article avec son nom et son prix. Retourne UNIQUEMENT un JSON : { "items": [ { "name": "...", "price": 0.00 } ] }`;
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`,
+                    {
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: compressedBase64.split(',')[1] } }] }],
-                            generationConfig: { 
+                        body: JSON.stringify({
+                            contents: [{ parts: [
+                                { text: prompt },
+                                { inlineData: { mimeType: "image/jpeg", data: b64.split(',')[1] } }
+                            ]}],
+                            generationConfig: {
                                 responseMimeType: "application/json",
                                 responseSchema: {
                                     type: "OBJECT",
@@ -171,10 +570,7 @@
                                             type: "ARRAY",
                                             items: {
                                                 type: "OBJECT",
-                                                properties: {
-                                                    name: { type: "STRING" },
-                                                    price: { type: "NUMBER" }
-                                                },
+                                                properties: { name: { type: "STRING" }, price: { type: "NUMBER" } },
                                                 required: ["name", "price"]
                                             }
                                         }
@@ -183,180 +579,366 @@
                                 }
                             }
                         })
-                    });
-                    
-                    const result = await res.json();
-                    const jsonText = result.candidates[0].content.parts[0].text;
-                    const data = JSON.parse(jsonText);
-                    setScanResult(data.items);
-                } catch (err) {
-                    alert("Erreur de lecture. Photo trop floue ou ticket illisible.");
-                    console.error(err);
-                } finally {
-                    setIsScanning(false);
-                }
-            };
-
-            const shoppingList = useMemo(() => products.filter(p => p.isNeeded), [products]);
-            const shoppingTotal = useMemo(() => shoppingList.reduce((s, c) => s + (c.currentPrice * (c.quantity || 1)), 0), [shoppingList]);
-            const monthTotal = useMemo(() => {
-                const now = new Date();
-                return receipts.filter(r => {
-                    const d = new Date(r.date);
-                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                }).reduce((s, r) => s + (r.total || 0), 0);
-            }, [receipts]);
-
-            if (loading) return <div className="h-screen flex items-center justify-center font-bold text-slate-400 italic animate-pulse">Ouverture de Panier Malin...</div>;
-
-            return (
-                <div className="pb-24 md:pb-0 md:pl-64 min-h-screen">
-                    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-50 md:top-0 md:w-64 md:flex-col md:justify-start md:border-r md:p-6 md:space-y-4 shadow-lg md:shadow-none">
-                        <div className="hidden md:flex items-center space-x-3 mb-8 text-indigo-600 font-black text-xl">
-                            <Icon name="ShoppingCart"/><h1 className="text-slate-800">Panier Malin</h1>
-                        </div>
-                        <button onClick={()=>setView('inventory')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-2xl transition-all ${view==='inventory'?'text-indigo-600 bg-indigo-50 font-bold shadow-sm':'text-slate-400'}`}><Icon name="LayoutDashboard"/><span>Catalogue</span></button>
-                        <button onClick={()=>setView('shopping')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl relative transition-all ${view==='shopping'?'text-indigo-600 bg-indigo-50 font-bold shadow-sm':'text-slate-400'}`}><Icon name="ListTodo"/><span>Ma Liste</span>{shoppingList.length>0&&<span className="absolute top-2 right-4 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold border-2 border-white">{shoppingList.length}</span>}</button>
-                        <button onClick={()=>setView('scan')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl transition-all ${view==='scan'?'text-indigo-600 bg-indigo-50 font-bold shadow-sm':'text-slate-400'}`}><Icon name="Camera"/><span>Scanner</span></button>
-                        <button onClick={()=>setView('stats')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl transition-all ${view==='stats'?'text-indigo-600 bg-indigo-50 font-bold shadow-sm':'text-slate-400'}`}><Icon name="PieChart"/><span>Stats</span></button>
-                    </nav>
-
-                    <main className="p-6 max-w-4xl mx-auto animate-in">
-                        {view === 'inventory' && (
-                            <section className="space-y-6">
-                                <h2 className="text-2xl font-black">Mon Catalogue</h2>
-                                <div className="bg-white p-5 rounded-[2rem] shadow-sm border space-y-4">
-                                    <input type="text" placeholder="Nom du produit" className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-100 transition-all" value={newItem.name} onChange={e=>setNewItem({...newItem, name:e.target.value})} />
-                                    <div className="flex space-x-3">
-                                        <input type="number" placeholder="Prix €" className="flex-1 p-4 bg-slate-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" value={newItem.price} onChange={e=>setNewItem({...newItem, price:e.target.value})} />
-                                        <button onClick={()=>{if(!newItem.name||!newItem.price)return; handleSave({...newItem, currentPrice:parseFloat(newItem.price), lastPrice:parseFloat(newItem.price), isNeeded:false, quantity:1}); setNewItem({name:'', price:'', category:'Épicerie'})}} className="bg-indigo-600 text-white px-8 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">Ajouter</button>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 gap-3">
-                                    {products.sort((a,b)=>a.name.localeCompare(b.name)).map(p => (
-                                        <div key={p.id} className="bg-white p-4 rounded-2xl border flex items-center justify-between shadow-sm group">
-                                            <div className="flex items-center space-x-4">
-                                                <button onClick={()=>handleUpdate(p.id, {isNeeded: !p.isNeeded})} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${p.isNeeded?'bg-indigo-600 text-white shadow-md':'bg-slate-100 text-slate-300 hover:bg-slate-200'}`}><Icon name={p.isNeeded?"CheckCircle2":"Plus"} size={20}/></button>
-                                                <span className="font-bold text-slate-700">{p.name}</span>
-                                            </div>
-                                            <div className="flex items-center space-x-4">
-                                                <input type="number" step="0.01" className="w-20 text-right font-black bg-slate-50 px-3 py-2 rounded-xl border-transparent focus:border-indigo-200 transition-all outline-none" defaultValue={p.currentPrice} onBlur={e=>handleUpdate(p.id, {lastPrice:p.currentPrice, currentPrice:parseFloat(e.target.value)})} />
-                                                <button onClick={()=>{if(confirm('Supprimer ce produit ?')){const {db,doc,deleteDoc}=window.firebase; deleteDoc(doc(db,'artifacts',appId,'users',user.uid,'products',p.id));}}} className="text-slate-200 hover:text-red-500 transition-colors p-2"><Icon name="Trash2" size={18}/></button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
-
-                        {view === 'shopping' && (
-                            <section className="space-y-6">
-                                <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
-                                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-                                    <p className="text-xs font-black uppercase opacity-70 tracking-widest mb-2">Estimation panier</p>
-                                    <p className="text-6xl font-black tracking-tighter">{shoppingTotal.toFixed(2)} €</p>
-                                </div>
-                                <div className="bg-white rounded-[2.5rem] shadow-sm border overflow-hidden divide-y divide-slate-50">
-                                    {shoppingList.map(item => (
-                                        <div key={item.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                                            <div className="flex items-center space-x-5">
-                                                <div className="flex items-center bg-slate-100 p-1 rounded-2xl">
-                                                    <button onClick={()=>handleUpdate(item.id, {quantity:Math.max(1,(item.quantity||1)-1)})} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm active:scale-90 transition-all"><Icon name="Minus" size={12}/></button>
-                                                    <span className="w-10 text-center font-black text-slate-800">{item.quantity||1}</span>
-                                                    <button onClick={()=>handleUpdate(item.id, {quantity:(item.quantity||1)+1})} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm active:scale-90 transition-all"><Icon name="Plus" size={12}/></button>
-                                                </div>
-                                                <span className="font-bold text-xl text-slate-800">{item.name}</span>
-                                            </div>
-                                            <span className="font-black text-indigo-600 text-2xl">{(item.currentPrice*(item.quantity||1)).toFixed(2)} €</span>
-                                        </div>
-                                    ))}
-                                    {shoppingList.length === 0 && <div className="p-24 text-center text-slate-400 italic flex flex-col items-center"><Icon name="ShoppingCart" className="mb-4 opacity-20" size={48}/>Panier vide</div>}
-                                </div>
-                                {shoppingList.length > 0 && <button onClick={async ()=>{
-                                    const {db,collection,addDoc,serverTimestamp}=window.firebase;
-                                    const total = shoppingTotal;
-                                    await addDoc(collection(db,'artifacts',appId,'users',user.uid,'receipts'),{date:new Date().toISOString(),total,itemCount:shoppingList.length,timestamp:serverTimestamp()});
-                                    for(const item of shoppingList) handleUpdate(item.id,{isNeeded:false,quantity:1});
-                                    setView('stats');
-                                }} className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black shadow-xl hover:bg-indigo-700 active:scale-95 transition-all text-xl uppercase tracking-widest mt-4">Terminer les courses</button>}
-                            </section>
-                        )}
-
-                        {view === 'scan' && (
-                            <section className="space-y-6">
-                                <h2 className="text-2xl font-black">Scanner un ticket</h2>
-                                
-                                {previewUrl && (
-                                    <div className="relative w-full h-72 bg-slate-900 rounded-[3rem] overflow-hidden mb-6 shadow-2xl group">
-                                        <img src={previewUrl} className="w-full h-full object-cover opacity-60 scale-105 group-hover:scale-100 transition-transform duration-500" />
-                                        {isScanning && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                                                <Icon name="Loader2" size={60} className="mb-4 opacity-80" />
-                                                <span className="font-black text-xl tracking-widest animate-pulse">ANALYSE IA...</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {!scanResult && !isScanning && (
-                                    <div className="bg-white p-20 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center hover:border-indigo-200 transition-colors">
-                                        <div className="bg-indigo-50 p-8 rounded-[2rem] text-indigo-600 mb-8 shadow-inner"><Icon name="Camera" size={50}/></div>
-                                        <label className="bg-indigo-600 text-white px-12 py-6 rounded-3xl font-black cursor-pointer shadow-2xl active:scale-95 transition-all text-center text-lg">
-                                            Choisir un ticket
-                                            <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
-                                        </label>
-                                        <p className="mt-6 text-sm text-slate-400 font-bold uppercase tracking-widest">IA Gemini Pro 2.5</p>
-                                    </div>
-                                )}
-
-                                {scanResult && (
-                                    <div className="bg-white rounded-[3rem] border overflow-hidden text-left shadow-2xl animate-in">
-                                        <div className="p-8 bg-green-50 font-black text-green-800 flex justify-between items-center px-10 border-b border-green-100">
-                                            <div className="flex items-center space-x-3"><Icon name="CheckCircle2"/><span>{scanResult.length} Articles détectés</span></div>
-                                            <button onClick={()=>{setScanResult(null); setPreviewUrl(null);}} className="hover:bg-green-100 p-2 rounded-full transition-colors"><Icon name="X" size={24}/></button>
-                                        </div>
-                                        <div className="divide-y divide-slate-50 max-h-96 overflow-y-auto bg-white">
-                                            {scanResult.map((it,i)=>(<div key={i} className="p-5 px-10 flex justify-between items-center font-bold text-slate-700 hover:bg-slate-50 transition-colors"><span>{it.name}</span><span className="bg-slate-100 px-4 py-2 rounded-2xl border font-black text-indigo-600">{it.price.toFixed(2)}€</span></div>))}
-                                        </div>
-                                        <div className="p-8 bg-slate-50 flex space-x-4 border-t">
-                                            <button onClick={()=>{setScanResult(null); setPreviewUrl(null);}} className="flex-1 bg-white border border-slate-200 py-5 rounded-3xl font-bold shadow-sm active:scale-95 transition-all">Effacer</button>
-                                            <button onClick={async ()=>{
-                                                const total=scanResult.reduce((s,i)=>s+i.price,0);
-                                                const {db,collection,addDoc,serverTimestamp}=window.firebase;
-                                                await addDoc(collection(db,'artifacts',appId,'users',user.uid,'receipts'),{date:new Date().toISOString(),total,itemCount:scanResult.length,timestamp:serverTimestamp()});
-                                                for(const s of scanResult){
-                                                    const ex = products.find(p => p.name.toLowerCase().trim().includes(s.name.toLowerCase().trim()) || s.name.toLowerCase().trim().includes(p.name.toLowerCase().trim()));
-                                                    if(ex) handleUpdate(ex.id, {lastPrice: ex.currentPrice, currentPrice: s.price});
-                                                    else handleSave({name: s.name, currentPrice: s.price, lastPrice: s.price, isNeeded: false, quantity: 1, category: 'Épicerie'});
-                                                }
-                                                setScanResult(null); setPreviewUrl(null); setView('inventory');
-                                            }} className="flex-1 bg-green-600 text-white py-5 rounded-3xl font-black shadow-xl active:scale-95 transition-all">Tout importer</button>
-                                        </div>
-                                    </div>
-                                )}
-                            </section>
-                        )}
-
-                        {view === 'stats' && (
-                            <section className="space-y-6">
-                                <h2 className="text-2xl font-black">Historique & Budget</h2>
-                                <div className="bg-white p-12 rounded-[3.5rem] border shadow-sm text-center relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-6 opacity-5"><Icon name="PieChart" size={120}/></div>
-                                    <p className="text-slate-400 font-bold uppercase text-xs mb-3 tracking-[0.2em]">Dépenses {new Date().toLocaleString('fr-FR', {month: 'long'})}</p>
-                                    <p className="text-7xl font-black text-indigo-600 tracking-tighter">{monthTotal.toFixed(2)} €</p>
-                                    <div className="mt-10 flex justify-center space-x-3">
-                                        <span className="bg-indigo-50 text-indigo-600 font-black text-[10px] uppercase px-4 py-2 rounded-full border border-indigo-100">{receipts.length} tickets cloud</span>
-                                    </div>
-                                </div>
-                            </section>
-                        )}
-                    </main>
-                </div>
-            );
+                    }
+                );
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || 'API error');
+                const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+                setScanResult(parsed.items);
+            } catch (err) {
+                console.error(err);
+                alert("Erreur d'analyse : " + (err.message || "Photo trop floue ou ticket illisible."));
+            } finally {
+                setIsScanning(false);
+            }
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+        const importScan = async () => {
+            const total = scanResult.reduce((s, i) => s + i.price, 0);
+            await addReceipt({ date: new Date().toISOString(), total, itemCount: scanResult.length });
+            for (const s of scanResult) {
+                const match = products.find(p =>
+                    p.name.toLowerCase().includes(s.name.toLowerCase()) ||
+                    s.name.toLowerCase().includes(p.name.toLowerCase())
+                );
+                if (match) updateProd(match.id, { lastPrice: match.currentPrice, currentPrice: s.price });
+                else saveProd({ name: s.name, currentPrice: s.price, lastPrice: s.price, isNeeded: false, quantity: 1 });
+            }
+            setScanResult(null); setPreviewUrl(null); setView('catalogue');
+        };
+
+        // ── Derived ───────────────────────────────────────────────────────────
+        const shoppingList = useMemo(() => products.filter(p => p.isNeeded), [products]);
+        const shoppingTotal = useMemo(() => shoppingList.reduce((s, p) => s + p.currentPrice * (p.quantity || 1), 0), [shoppingList]);
+        const filteredProducts = useMemo(() => {
+            const q = search.toLowerCase();
+            return products
+                .filter(p => p.name.toLowerCase().includes(q))
+                .sort((a, b) => a.name.localeCompare(b.name));
+        }, [products, search]);
+        const monthTotal = useMemo(() => {
+            const now = new Date();
+            return receipts.filter(r => {
+                const d = new Date(r.date);
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }).reduce((s, r) => s + (r.total || 0), 0);
+        }, [receipts]);
+
+        // ── Loading ───────────────────────────────────────────────────────────
+        if (loading) return (
+            <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                <div className="loader-ring"></div>
+                <span style={{ fontFamily: 'DM Mono', fontSize: 12, color: 'var(--muted)', letterSpacing: '0.1em' }}>CHARGEMENT...</span>
+            </div>
+        );
+
+        // ── Render ────────────────────────────────────────────────────────────
+        return (
+            <div style={{ paddingBottom: 80, minHeight: '100vh' }}>
+
+                {/* ── CATALOGUE ── */}
+                {view === 'catalogue' && (
+                    <div className="fade-up" style={{ padding: '20px 16px' }}>
+                        <div className="page-header">
+                            <span className="page-title">Catalogue</span>
+                            <span className="chip accent">{products.length} produits</span>
+                        </div>
+
+                        {/* Add form */}
+                        <div className="card" style={{ padding: 14, marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <input
+                                className="inp"
+                                placeholder="Nom du produit"
+                                value={newItem.name}
+                                onChange={e => setNewItem({ ...newItem, name: e.target.value })}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && newItem.name && newItem.price) {
+                                        saveProd({ ...newItem, currentPrice: parseFloat(newItem.price), lastPrice: parseFloat(newItem.price), isNeeded: false, quantity: 1 });
+                                        setNewItem({ name: '', price: '' });
+                                    }
+                                }}
+                            />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                    className="inp"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="Prix €"
+                                    value={newItem.price}
+                                    onChange={e => setNewItem({ ...newItem, price: e.target.value })}
+                                    style={{ flex: 1 }}
+                                />
+                                <button className="btn-accent" onClick={() => {
+                                    if (!newItem.name || !newItem.price) return;
+                                    saveProd({ ...newItem, currentPrice: parseFloat(newItem.price), lastPrice: parseFloat(newItem.price), isNeeded: false, quantity: 1 });
+                                    setNewItem({ name: '', price: '' });
+                                }}>
+                                    Ajouter
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Search */}
+                        {products.length > 4 && (
+                            <input
+                                className="inp"
+                                placeholder="Rechercher..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                style={{ marginBottom: 10 }}
+                            />
+                        )}
+
+                        {/* List */}
+                        <div className="card" style={{ overflow: 'hidden' }}>
+                            {filteredProducts.length === 0 && (
+                                <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+                                    Aucun produit
+                                </div>
+                            )}
+                            {filteredProducts.map(p => (
+                                <div className="product-row" key={p.id}>
+                                    <button
+                                        className={`check-btn ${p.isNeeded ? 'checked' : ''}`}
+                                        onClick={() => updateProd(p.id, { isNeeded: !p.isNeeded })}
+                                    >
+                                        {p.isNeeded && <Icon name="check" size={14} style={{ color: '#0c0c0e' }} />}
+                                    </button>
+                                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: p.isNeeded ? 'var(--text)' : 'var(--muted)' }}>
+                                        {p.name}
+                                    </span>
+                                    {p.lastPrice && p.lastPrice !== p.currentPrice && (
+                                        <span style={{ fontFamily: 'DM Mono', fontSize: 10, color: 'var(--muted)', textDecoration: 'line-through', marginRight: 4 }}>
+                                            {p.lastPrice.toFixed(2)}
+                                        </span>
+                                    )}
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="price-inp"
+                                        defaultValue={p.currentPrice?.toFixed(2)}
+                                        key={p.currentPrice}
+                                        onBlur={e => updateProd(p.id, { lastPrice: p.currentPrice, currentPrice: parseFloat(e.target.value) })}
+                                    />
+                                    <button className="del-btn" onClick={() => { if (confirm('Supprimer ?')) deleteProd(p.id); }}>
+                                        <Icon name="trash" size={15} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── LISTE ── */}
+                {view === 'liste' && (
+                    <div className="fade-up" style={{ padding: '20px 16px' }}>
+                        <div className="page-header">
+                            <span className="page-title">Ma Liste</span>
+                            <span className="chip">{shoppingList.length} articles</span>
+                        </div>
+
+                        {/* Total */}
+                        <div className="total-bar" style={{ marginBottom: 14 }}>
+                            <div>
+                                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 2 }}>Estimation</div>
+                                <div className="stat-amount" style={{ fontSize: 36 }}>{shoppingTotal.toFixed(2)} €</div>
+                            </div>
+                            {shoppingList.length > 0 && (
+                                <button
+                                    className="btn-accent"
+                                    onClick={async () => {
+                                        await addReceipt({ date: new Date().toISOString(), total: shoppingTotal, itemCount: shoppingList.length });
+                                        for (const item of shoppingList) updateProd(item.id, { isNeeded: false, quantity: 1 });
+                                        setView('stats');
+                                    }}
+                                    style={{ fontSize: 12, padding: '10px 16px' }}
+                                >
+                                    Terminer
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Items */}
+                        <div className="card" style={{ overflow: 'hidden' }}>
+                            {shoppingList.length === 0 && (
+                                <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+                                    Liste vide — coche des produits dans le catalogue
+                                </div>
+                            )}
+                            {shoppingList.map(item => (
+                                <div className="product-row" key={item.id}>
+                                    <div className="qty-ctrl">
+                                        <button className="qty-btn" onClick={() => updateProd(item.id, { quantity: Math.max(1, (item.quantity || 1) - 1) })}>
+                                            <Icon name="minus" size={12} />
+                                        </button>
+                                        <span className="qty-val">{item.quantity || 1}</span>
+                                        <button className="qty-btn" onClick={() => updateProd(item.id, { quantity: (item.quantity || 1) + 1 })}>
+                                            <Icon name="plus" size={12} />
+                                        </button>
+                                    </div>
+                                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500, paddingLeft: 10 }}>{item.name}</span>
+                                    <span className="price-tag">{(item.currentPrice * (item.quantity || 1)).toFixed(2)} €</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── SCANNER ── */}
+                {view === 'scanner' && (
+                    <div className="fade-up" style={{ padding: '20px 16px' }}>
+                        <div className="page-header">
+                            <span className="page-title">Scanner</span>
+                            <span className="chip accent mono">Gemini 1.5</span>
+                        </div>
+
+                        {/* Preview */}
+                        {previewUrl && (
+                            <div className="scan-preview" style={{ marginBottom: 14 }}>
+                                <img src={previewUrl} alt="ticket" />
+                                {isScanning && (
+                                    <div className="scan-overlay">
+                                        <div className="loader-ring"></div>
+                                        <span className="mono pulse-accent" style={{ fontSize: 11, letterSpacing: '0.1em' }}>ANALYSE EN COURS...</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Drop zone */}
+                        {!scanResult && !isScanning && (
+                            <label className="scan-drop">
+                                <div className="scan-icon-wrap">
+                                    <Icon name="camera" size={32} />
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>
+                                        {previewUrl ? 'Changer de ticket' : 'Choisir un ticket'}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>Photo ou galerie</div>
+                                </div>
+                                <input
+                                    ref={fileRef}
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: 'none' }}
+                                    onChange={handleFileSelect}
+                                />
+                            </label>
+                        )}
+
+                        {/* Results */}
+                        {scanResult && !isScanning && (
+                            <div className="card fade-up" style={{ overflow: 'hidden' }}>
+                                <div style={{
+                                    padding: '12px 16px',
+                                    borderBottom: '1px solid var(--border)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <Icon name="ok" size={16} style={{ color: 'var(--accent)' }} />
+                                        <span style={{ fontWeight: 700, fontSize: 14 }}>{scanResult.length} articles</span>
+                                    </div>
+                                    <button className="del-btn" onClick={() => { setScanResult(null); setPreviewUrl(null); }}>
+                                        <Icon name="x" size={16} />
+                                    </button>
+                                </div>
+                                <div className="results-scroll">
+                                    {scanResult.map((it, i) => (
+                                        <div className="scan-item" key={i}>
+                                            <span style={{ fontSize: 13, color: 'var(--text)', flex: 1, paddingRight: 12 }}>{it.name}</span>
+                                            <span className="price-tag">{it.price.toFixed(2)} €</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ padding: 14, display: 'flex', gap: 8, borderTop: '1px solid var(--border)' }}>
+                                    <button className="btn-ghost" style={{ flex: 1 }} onClick={() => { setScanResult(null); setPreviewUrl(null); }}>
+                                        Annuler
+                                    </button>
+                                    <button className="btn-accent" style={{ flex: 2 }} onClick={importScan}>
+                                        Importer dans le catalogue
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ── STATS ── */}
+                {view === 'stats' && (
+                    <div className="fade-up" style={{ padding: '20px 16px' }}>
+                        <div className="page-header">
+                            <span className="page-title">Budget</span>
+                        </div>
+
+                        {/* Month total */}
+                        <div className="stat-block" style={{ marginBottom: 14 }}>
+                            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>
+                                {new Date().toLocaleString('fr-FR', { month: 'long', year: 'numeric' })}
+                            </div>
+                            <div className="stat-amount">{monthTotal.toFixed(2)} €</div>
+                            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                                <span className="chip accent">{receipts.filter(r => {
+                                    const d = new Date(r.date);
+                                    const n = new Date();
+                                    return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+                                }).length} tickets ce mois</span>
+                                <span className="chip">{receipts.length} total</span>
+                            </div>
+                        </div>
+
+                        {/* Receipts */}
+                        {receipts.length > 0 && (
+                            <div className="card" style={{ overflow: 'hidden' }}>
+                                <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                                    Historique
+                                </div>
+                                {[...receipts].sort((a,b) => new Date(b.date)-new Date(a.date)).slice(0,10).map(r => (
+                                    <div className="receipt-row" key={r.id}>
+                                        <div>
+                                            <div style={{ fontSize: 13, fontWeight: 600 }}>
+                                                {new Date(r.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                                                {r.itemCount} articles
+                                            </div>
+                                        </div>
+                                        <span className="price-tag">{(r.total || 0).toFixed(2)} €</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {receipts.length === 0 && (
+                            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+                                Pas encore de tickets enregistrés
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ── NAV ── */}
+                <nav className="nav-bar">
+                    {[
+                        { id: 'catalogue', icon: 'grid',    label: 'Catalogue' },
+                        { id: 'liste',     icon: 'list',    label: 'Liste', badge: shoppingList.length },
+                        { id: 'scanner',   icon: 'camera',  label: 'Scanner' },
+                        { id: 'stats',     icon: 'chart',   label: 'Budget' },
+                    ].map(tab => (
+                        <button key={tab.id} className={`nav-btn ${view === tab.id ? 'active' : ''}`} onClick={() => setView(tab.id)}>
+                            {tab.badge > 0 && <span className="nav-badge">{tab.badge}</span>}
+                            <Icon name={tab.icon} size={20} />
+                            {tab.label}
+                        </button>
+                    ))}
+                </nav>
+            </div>
+        );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+```
+
 </body>
 </html>
