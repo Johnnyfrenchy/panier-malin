@@ -10,400 +10,263 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0c0c0e;
-            --surface: #131316;
-            --surface2: #1a1a1f;
-            --border: #242428;
-            --accent: #b8f94a;
-            --accent-dim: rgba(184,249,74,0.12);
-            --accent-glow: rgba(184,249,74,0.25);
-            --text: #e8e8ec;
-            --muted: #5a5a65;
-            --danger: #ff4d4d;
-            --danger-dim: rgba(255,77,77,0.12);
+            --bg: #f5f5f7;
+            --surface: #ffffff;
+            --surface2: #f0f0f2;
+            --border: #e4e4e8;
+            --border-light: #efefef;
+            --accent: #3b6ef5;
+            --accent-light: #eef1fe;
+            --accent-dark: #2554d4;
+            --text: #111116;
+            --text-2: #3a3a45;
+            --muted: #8e8e9a;
+            --up: #e03a3a;
+            --up-bg: #fff0f0;
+            --down: #1a9e6a;
+            --down-bg: #edfaf4;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
         }
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Figtree', sans-serif;
             background: var(--bg);
             color: var(--text);
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden;
             min-height: 100vh;
         }
-        .mono { font-family: 'DM Mono', monospace; }
-        .syne { font-family: 'Syne', sans-serif; }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .fade-up   { animation: fadeUp 0.2s ease-out both; }
+        .fade-up-1 { animation: fadeUp 0.2s 0.05s ease-out both; }
+        .fade-up-2 { animation: fadeUp 0.2s 0.10s ease-out both; }
+        .fade-up-3 { animation: fadeUp 0.2s 0.15s ease-out both; }
 
 ```
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 3px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    /* Animations */
-    @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(12px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes pulse-accent {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    @keyframes scanline {
-        0% { transform: translateY(-100%); }
-        100% { transform: translateY(100vh); }
-    }
-
-    .fade-up { animation: fadeUp 0.25s ease-out both; }
-    .spin { animation: spin 1s linear infinite; }
-    .pulse-accent { animation: pulse-accent 1.5s ease-in-out infinite; }
-
     /* Nav */
     .nav-bar {
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        background: var(--surface);
-        border-top: 1px solid var(--border);
-        display: flex;
-        z-index: 100;
+        position: fixed; bottom: 0; left: 0; right: 0;
+        background: rgba(255,255,255,0.94);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid var(--border-light);
+        display: flex; z-index: 100;
         padding-bottom: env(safe-area-inset-bottom);
     }
     .nav-btn {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 3px;
+        flex: 1; display: flex; flex-direction: column;
+        align-items: center; gap: 3px;
         padding: 10px 0 8px;
-        font-size: 9px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        font-size: 10px; font-weight: 600;
         color: var(--muted);
         transition: color 0.15s;
-        position: relative;
-        cursor: pointer;
-        border: none;
-        background: none;
+        position: relative; cursor: pointer;
+        border: none; background: none;
+        font-family: 'Figtree', sans-serif;
     }
-    .nav-btn.active {
-        color: var(--accent);
-    }
-    .nav-btn.active::after {
-        content: '';
-        position: absolute;
-        top: 0; left: 25%; right: 25%;
-        height: 2px;
-        background: var(--accent);
-        border-radius: 0 0 2px 2px;
-    }
+    .nav-btn.active { color: var(--accent); }
     .nav-badge {
-        position: absolute;
-        top: 6px; right: calc(50% - 18px);
-        background: var(--danger);
-        color: white;
-        font-size: 9px;
-        font-weight: 700;
-        width: 16px; height: 16px;
-        border-radius: 50%;
+        position: absolute; top: 6px; right: calc(50% - 20px);
+        background: var(--up); color: white;
+        font-size: 9px; font-weight: 700;
+        min-width: 16px; height: 16px; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
-        border: 2px solid var(--surface);
+        padding: 0 4px; border: 2px solid white;
     }
 
-    /* Cards */
+    /* Card */
     .card {
         background: var(--surface);
-        border: 1px solid var(--border);
         border-radius: 16px;
-    }
-    .card-tight {
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-light);
     }
 
     /* Input */
     .inp {
         background: var(--surface2);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        color: var(--text);
-        padding: 10px 14px;
-        font-family: 'Inter', sans-serif;
-        font-size: 14px;
-        width: 100%;
-        outline: none;
-        transition: border-color 0.15s;
+        border: 1.5px solid transparent;
+        border-radius: 12px; color: var(--text);
+        padding: 12px 14px;
+        font-family: 'Figtree', sans-serif;
+        font-size: 15px; width: 100%; outline: none;
+        transition: border-color 0.15s, background 0.15s;
+        font-weight: 500;
     }
-    .inp:focus { border-color: var(--accent); }
-    .inp::placeholder { color: var(--muted); }
+    .inp:focus { border-color: var(--accent); background: white; }
+    .inp::placeholder { color: var(--muted); font-weight: 400; }
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 
     /* Buttons */
-    .btn-accent {
-        background: var(--accent);
-        color: #0c0c0e;
-        font-weight: 700;
-        font-size: 13px;
-        border: none;
-        border-radius: 10px;
-        padding: 11px 20px;
-        cursor: pointer;
-        transition: opacity 0.15s, transform 0.1s;
-        letter-spacing: 0.02em;
+    .btn-primary {
+        background: var(--accent); color: white;
+        font-weight: 700; font-size: 14px;
+        border: none; border-radius: 12px; padding: 12px 20px;
+        cursor: pointer; transition: background 0.15s, transform 0.1s;
+        font-family: 'Figtree', sans-serif;
+        box-shadow: 0 2px 8px rgba(59,110,245,0.25);
     }
-    .btn-accent:active { transform: scale(0.97); opacity: 0.85; }
-
-    .btn-ghost {
-        background: var(--surface2);
-        color: var(--text);
-        font-weight: 500;
-        font-size: 13px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 11px 20px;
-        cursor: pointer;
-        transition: border-color 0.15s;
+    .btn-primary:active { transform: scale(0.97); background: var(--accent-dark); }
+    .btn-secondary {
+        background: var(--surface2); color: var(--text-2);
+        font-weight: 600; font-size: 14px;
+        border: 1px solid var(--border); border-radius: 12px; padding: 12px 20px;
+        cursor: pointer; font-family: 'Figtree', sans-serif;
     }
-    .btn-ghost:hover { border-color: var(--muted); }
 
     /* Product row */
     .product-row {
-        display: flex;
-        align-items: center;
-        padding: 11px 14px;
-        border-bottom: 1px solid var(--border);
+        display: flex; align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-light);
         gap: 10px;
-        transition: background 0.1s;
     }
     .product-row:last-child { border-bottom: none; }
     .product-row:active { background: var(--surface2); }
 
     .check-btn {
-        width: 28px; height: 28px;
-        border-radius: 8px;
-        border: 1.5px solid var(--border);
-        background: none;
+        width: 24px; height: 24px; border-radius: 7px;
+        border: 1.5px solid var(--border); background: none;
         display: flex; align-items: center; justify-content: center;
-        cursor: pointer;
-        flex-shrink: 0;
-        transition: all 0.15s;
+        cursor: pointer; flex-shrink: 0; transition: all 0.15s;
     }
-    .check-btn.checked {
-        background: var(--accent);
-        border-color: var(--accent);
-    }
+    .check-btn.checked { background: var(--accent); border-color: var(--accent); }
 
-    /* Price tag */
-    .price-tag {
+    .var-badge {
         font-family: 'DM Mono', monospace;
-        font-size: 13px;
-        color: var(--accent);
-        background: var(--accent-dim);
-        padding: 3px 8px;
-        border-radius: 6px;
+        font-size: 10px; font-weight: 500;
+        padding: 2px 6px; border-radius: 5px; flex-shrink: 0;
     }
+    .var-up   { color: var(--up);   background: var(--up-bg); }
+    .var-down { color: var(--down); background: var(--down-bg); }
 
-    /* Scanner */
-    .scan-drop {
-        border: 1.5px dashed var(--border);
-        border-radius: 20px;
-        padding: 48px 24px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 16px;
-        transition: border-color 0.2s;
-        cursor: pointer;
+    .price-inp {
+        background: transparent; border: none;
+        font-family: 'DM Mono', monospace;
+        font-size: 13px; color: var(--text-2);
+        width: 60px; text-align: right; outline: none;
+        padding: 4px 6px; border-radius: 6px; transition: background 0.15s;
     }
-    .scan-drop:hover { border-color: var(--accent); }
+    .price-inp:focus { background: var(--accent-light); color: var(--accent); }
 
-    .scan-icon-wrap {
-        width: 72px; height: 72px;
-        border-radius: 20px;
-        background: var(--accent-dim);
-        display: flex; align-items: center; justify-content: center;
-        color: var(--accent);
+    .del-btn {
+        background: none; border: none; color: var(--border);
+        cursor: pointer; padding: 4px; border-radius: 6px;
+        transition: color 0.15s, background 0.15s;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
+    .del-btn:hover { color: var(--up); background: var(--up-bg); }
 
-    /* Scanning overlay */
-    .scan-overlay {
-        position: absolute; inset: 0;
-        background: rgba(12,12,14,0.7);
-        display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
-        gap: 12px;
-        border-radius: 16px;
-    }
-    .scan-preview {
-        position: relative;
-        width: 100%;
-        height: 220px;
-        border-radius: 16px;
-        overflow: hidden;
-        background: #000;
-    }
-    .scan-preview img {
-        width: 100%; height: 100%;
-        object-fit: cover;
-        opacity: 0.5;
-    }
-
-    /* Stats */
-    .stat-block {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 20px;
-    }
-    .stat-amount {
-        font-family: 'Syne', sans-serif;
-        font-size: 48px;
-        font-weight: 800;
-        color: var(--accent);
-        line-height: 1;
-        letter-spacing: -0.02em;
-    }
-
-    /* Shopping total */
-    .total-bar {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 16px 18px;
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-    }
-
-    /* Qty control */
+    /* Qty */
     .qty-ctrl {
-        display: flex;
-        align-items: center;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        overflow: hidden;
+        display: flex; align-items: center;
+        background: var(--surface2); border-radius: 8px; overflow: hidden; flex-shrink: 0;
     }
     .qty-btn {
-        width: 28px; height: 28px;
-        display: flex; align-items: center; justify-content: center;
-        background: none;
-        border: none;
-        color: var(--muted);
-        cursor: pointer;
-        transition: color 0.1s;
+        width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+        background: none; border: none; color: var(--muted); cursor: pointer;
     }
-    .qty-btn:active { color: var(--accent); }
-    .qty-val {
-        font-family: 'DM Mono', monospace;
-        font-size: 13px;
-        min-width: 24px;
-        text-align: center;
+    .qty-btn:active { color: var(--accent); background: var(--accent-light); }
+    .qty-val { font-family: 'DM Mono', monospace; font-size: 13px; min-width: 24px; text-align: center; font-weight: 500; }
+
+    /* Scanner */
+    .scan-zone {
+        border: 1.5px dashed var(--border); border-radius: 20px;
+        padding: 52px 24px; display: flex; flex-direction: column;
+        align-items: center; gap: 14px;
+        transition: border-color 0.2s, background 0.2s;
+        cursor: pointer; background: white;
+    }
+    .scan-zone:hover { border-color: var(--accent); background: var(--accent-light); }
+    .scan-icon {
+        width: 64px; height: 64px; border-radius: 18px;
+        background: var(--accent-light);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .scan-preview {
+        position: relative; width: 100%; height: 200px;
+        border-radius: 16px; overflow: hidden; background: #000;
+    }
+    .scan-preview img { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
+    .scan-overlay {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    }
+    .loader {
+        width: 32px; height: 32px;
+        border: 2px solid rgba(255,255,255,0.2);
+        border-top-color: white; border-radius: 50%;
+        animation: spin 0.7s linear infinite;
     }
 
-    /* Receipt row */
+    /* Dashboard hero */
+    .dashboard-hero {
+        background: var(--accent); border-radius: 20px;
+        padding: 24px; color: white;
+        position: relative; overflow: hidden;
+    }
+    .dashboard-hero::before {
+        content: ''; position: absolute; top: -40px; right: -40px;
+        width: 160px; height: 160px;
+        background: rgba(255,255,255,0.07); border-radius: 50%;
+    }
+    .hero-amount {
+        font-family: 'DM Mono', monospace;
+        font-size: 44px; font-weight: 500;
+        letter-spacing: -0.02em; line-height: 1;
+    }
+    .stat-pill {
+        display: inline-flex; align-items: center; gap: 5px;
+        background: rgba(255,255,255,0.15); border-radius: 20px;
+        padding: 4px 10px; font-size: 12px; font-weight: 600;
+    }
+
+    /* Quick action */
+    .quick-action {
+        background: white; border: 1px solid var(--border-light);
+        border-radius: 16px; padding: 16px;
+        display: flex; align-items: center; gap: 12px;
+        cursor: pointer; transition: transform 0.1s;
+        box-shadow: var(--shadow-sm); text-align: left;
+    }
+    .quick-action:active { transform: scale(0.98); }
+    .qa-icon {
+        width: 44px; height: 44px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+
+    /* Misc */
+    .chip {
+        display: inline-flex; align-items: center;
+        font-size: 11px; font-weight: 600; padding: 3px 9px;
+        border-radius: 20px; background: var(--accent-light); color: var(--accent);
+    }
     .receipt-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 14px;
-        border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 13px 16px; border-bottom: 1px solid var(--border-light);
     }
     .receipt-row:last-child { border-bottom: none; }
-
-    /* Header */
-    .page-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 16px;
+    .section-title {
+        font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
     }
-    .page-title {
-        font-family: 'Syne', sans-serif;
-        font-size: 22px;
-        font-weight: 800;
-        letter-spacing: -0.01em;
-    }
-
-    /* Chip */
-    .chip {
-        font-size: 10px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        padding: 3px 8px;
-        border-radius: 5px;
-        background: var(--surface2);
-        color: var(--muted);
-        border: 1px solid var(--border);
-    }
-    .chip.accent {
-        background: var(--accent-dim);
-        color: var(--accent);
-        border-color: rgba(184,249,74,0.2);
-    }
-
-    /* Inline price input */
-    .price-inp {
-        background: transparent;
-        border: none;
-        font-family: 'DM Mono', monospace;
-        font-size: 13px;
-        color: var(--accent);
-        width: 64px;
-        text-align: right;
-        outline: none;
-        padding: 3px 6px;
-        border-radius: 6px;
-        transition: background 0.15s;
-    }
-    .price-inp:focus {
-        background: var(--accent-dim);
-    }
-
-    /* Delete */
-    .del-btn {
-        background: none;
-        border: none;
-        color: var(--muted);
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 6px;
-        transition: color 0.15s, background 0.15s;
-        display: flex; align-items: center; justify-content: center;
-    }
-    .del-btn:hover { color: var(--danger); background: var(--danger-dim); }
-
-    /* Scan result item */
+    .page-title { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
     .scan-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px 16px;
-        border-bottom: 1px solid var(--border);
-        font-size: 14px;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 11px 16px; border-bottom: 1px solid var(--border-light); font-size: 14px;
     }
     .scan-item:last-child { border-bottom: none; }
-
-    /* Loader */
-    .loader-ring {
-        width: 40px; height: 40px;
-        border: 2.5px solid var(--border);
-        border-top-color: var(--accent);
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-    }
-
-    /* Scrollable results */
-    .results-scroll {
-        max-height: 280px;
-        overflow-y: auto;
+    .empty { padding: 48px 24px; text-align: center; color: var(--muted); font-size: 14px; }
+    .empty-icon {
+        width: 56px; height: 56px; border-radius: 16px; background: var(--surface2);
+        display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
     }
 </style>
 ```
@@ -416,7 +279,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDQ2qyBeT_iLuCF3UEmQ2S93z8Qlv6uJSI",
@@ -430,55 +293,58 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    window.firebase = { auth, db, signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy };
+    window.firebase = { auth, db, signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp };
 </script>
 
 <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    // ─── Icons ───────────────────────────────────────────────────────────────
-    const Icon = ({ name, size = 20, style = {} }) => {
-        const paths = {
-            grid:     <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
-            list:     <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9l6 0M9 12l6 0M9 15l3 0"/></>,
-            camera:   <><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>,
-            chart:    <><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></>,
-            plus:     <path d="M12 5v14M5 12h14"/>,
-            minus:    <path d="M5 12h14"/>,
-            trash:    <><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6m4-6v6"/></>,
-            check:    <path d="M5 12l4 4 10-10"/>,
-            x:        <path d="M18 6 6 18M6 6l12 12"/>,
-            bag:      <><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></>,
-            ok:       <><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></>,
-            trend:    <path d="m22 7-8.5 8.5-5-5L2 17m14-10h6v6"/>,
-            receipt:  <><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M16 8H8m8 4H8m8 4H8"/></>,
+    const Icon = ({ name, size = 20, color = 'currentColor' }) => {
+        const p = {
+            home:       <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+            grid:       <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
+            list:       <><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></>,
+            camera:     <><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>,
+            chart:      <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>,
+            plus:       <path d="M12 5v14M5 12h14"/>,
+            minus:      <path d="M5 12h14"/>,
+            trash:      <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>,
+            check:      <path d="M5 12l4 4 10-10"/>,
+            x:          <path d="M18 6 6 18M6 6l12 12"/>,
+            ok:         <><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>,
+            trend_up:   <path d="m22 7-8.5 8.5-5-5L2 17m14-10h6v6"/>,
+            trend_down: <path d="m22 17-8.5-8.5-5 5L2 7m14 10h6v-6"/>,
+            receipt:    <><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M16 8H8m8 4H8m5 4H8"/></>,
+            tag:        <><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>,
         };
         return (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
-                {paths[name]}
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+                fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {p[name]}
             </svg>
         );
     };
 
-    // ─── Config ───────────────────────────────────────────────────────────────
     const APP_ID = "panier-malin-prod";
+    const fmt = (n) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
+    const priceDelta = (current, last) => {
+        if (!last || last === 0 || current === last) return null;
+        return ((current - last) / last * 100).toFixed(1);
+    };
 
-    // ─── App ──────────────────────────────────────────────────────────────────
     const App = () => {
-        const [user, setUser]           = useState(null);
-        const [view, setView]           = useState('catalogue');
-        const [products, setProducts]   = useState([]);
-        const [receipts, setReceipts]   = useState([]);
-        const [loading, setLoading]     = useState(true);
+        const [user, setUser]             = useState(null);
+        const [view, setView]             = useState('accueil');
+        const [products, setProducts]     = useState([]);
+        const [receipts, setReceipts]     = useState([]);
+        const [loading, setLoading]       = useState(true);
         const [isScanning, setIsScanning] = useState(false);
         const [scanResult, setScanResult] = useState(null);
         const [previewUrl, setPreviewUrl] = useState(null);
-        const [newItem, setNewItem]     = useState({ name: '', price: '' });
-        const [search, setSearch]       = useState('');
+        const [newItem, setNewItem]       = useState({ name: '', price: '' });
+        const [search, setSearch]         = useState('');
         const fileRef = useRef();
 
-        // Firebase auth
         useEffect(() => {
             if (!window.firebase) return;
             const { auth, onAuthStateChanged, signInAnonymously } = window.firebase;
@@ -486,7 +352,6 @@
             return onAuthStateChanged(auth, u => { setUser(u); if (!u) setLoading(false); });
         }, []);
 
-        // Firestore listeners
         useEffect(() => {
             if (!user || !window.firebase) return;
             const { db, collection, onSnapshot } = window.firebase;
@@ -501,26 +366,18 @@
             return () => { u1(); u2(); };
         }, [user]);
 
-        // ── Firestore helpers ─────────────────────────────────────────────────
-        const dbPath = (...parts) => {
-            const { db, doc } = window.firebase;
-            return doc(db, 'artifacts', APP_ID, 'users', user.uid, ...parts);
-        };
-
-        const updateProd = (id, fields) => window.firebase.updateDoc(dbPath('products', id), fields);
-        const deleteProd = (id) => window.firebase.deleteDoc(dbPath('products', id));
-        const saveProd   = (p) => {
+        const dbRef = (...parts) => window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, ...parts);
+        const updateProd = (id, fields) => window.firebase.updateDoc(dbRef('products', id), fields);
+        const deleteProd = (id) => window.firebase.deleteDoc(dbRef('products', id));
+        const saveProd = (p) => {
             const id = p.id || Date.now().toString();
-            window.firebase.setDoc(dbPath('products', id), { ...p, id }, { merge: true });
+            window.firebase.setDoc(dbRef('products', id), { ...p, id }, { merge: true });
         };
         const addReceipt = (data) => {
             const { db, collection, addDoc, serverTimestamp } = window.firebase;
-            return addDoc(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'receipts'), {
-                ...data, timestamp: serverTimestamp()
-            });
+            return addDoc(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'receipts'), { ...data, timestamp: serverTimestamp() });
         };
 
-        // ── Image resize ──────────────────────────────────────────────────────
         const resizeImage = (file) => new Promise(resolve => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -529,9 +386,8 @@
                 img.src = e.target.result;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX = 1200;
-                    const scale = MAX / img.width;
-                    canvas.width = MAX;
+                    const scale = Math.min(1200 / img.width, 1);
+                    canvas.width = img.width * scale;
                     canvas.height = img.height * scale;
                     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
                     resolve(canvas.toDataURL('image/jpeg', 0.85));
@@ -539,7 +395,6 @@
             };
         });
 
-        // ── Gemini scan ───────────────────────────────────────────────────────
         const handleFileSelect = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -548,41 +403,47 @@
             setScanResult(null);
             try {
                 const b64 = await resizeImage(file);
-                const prompt = `Analyse ce ticket de caisse. Extrais chaque article avec son nom et son prix. Retourne UNIQUEMENT un JSON : { "items": [ { "name": "...", "price": 0.00 } ] }`;
-                const res = await fetch(
-                    '/api/gemini',
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [
-                                { text: prompt },
-                                { inlineData: { mimeType: "image/jpeg", data: b64.split(',')[1] } }
-                            ]}],
-                            generationConfig: {
-                                responseMimeType: "application/json",
-                                responseSchema: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        items: {
-                                            type: "ARRAY",
-                                            items: {
-                                                type: "OBJECT",
-                                                properties: { name: { type: "STRING" }, price: { type: "NUMBER" } },
-                                                required: ["name", "price"]
-                                            }
-                                        }
-                                    },
-                                    required: ["items"]
-                                }
+                const prompt = `Tu es un assistant qui analyse des tickets de caisse français.
+```
+
+RÈGLES STRICTES :
+
+- Extrais UNIQUEMENT les vrais produits achetés
+- IGNORE absolument : remises, réductions, promotions, garanties, totaux, sous-totaux, TVA, lignes de fidélité, frais de service
+- Si un article apparaît plusieurs fois avec le même nom, ne l’inclus QU’UNE SEULE FOIS avec le prix unitaire
+- Nettoie les noms : supprime les codes articles (chiffres en début), les abréviations inutiles, les points de suspension. Rends le nom lisible et court (max 4 mots)
+- Le prix doit être le prix unitaire réel payé (après remise si applicable), jamais négatif
+
+Exemples de lignes à IGNORER : Remise 50%, TOTAL, TVA, Garantie, ARTICLE A X EUROS, lignes avec prix négatif
+Exemples de noms à NETTOYER : “03 PAMPERS PREMIUM PROTECTION M124” devient “Pampers Premium Protection”, “04*EVIAN EAU PLATE 1,5L UNITA” devient “Evian eau plate 1.5L”
+
+Retourne UNIQUEMENT un JSON valide : { “items”: [ { “name”: “…”, “price”: 0.00 } ] }`;
+
+```
+                const res = await fetch('/api/gemini', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [
+                            { text: prompt },
+                            { inlineData: { mimeType: "image/jpeg", data: b64.split(',')[1] } }
+                        ]}],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    items: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, price: { type: "NUMBER" } }, required: ["name", "price"] } }
+                                },
+                                required: ["items"]
                             }
-                        })
-                    }
-                );
+                        }
+                    })
+                });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error?.message || 'API error');
+                if (!res.ok) throw new Error(data.error?.message || 'Erreur API');
                 const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
-                setScanResult(parsed.items);
+                setScanResult(parsed.items.filter(i => i.price > 0));
             } catch (err) {
                 console.error(err);
                 alert("Erreur d'analyse : " + (err.message || "Photo trop floue ou ticket illisible."));
@@ -596,186 +457,194 @@
             await addReceipt({ date: new Date().toISOString(), total, itemCount: scanResult.length });
             for (const s of scanResult) {
                 const match = products.find(p =>
-                    p.name.toLowerCase().includes(s.name.toLowerCase()) ||
-                    s.name.toLowerCase().includes(p.name.toLowerCase())
+                    p.name.toLowerCase().includes(s.name.toLowerCase().slice(0, 6)) ||
+                    s.name.toLowerCase().includes(p.name.toLowerCase().slice(0, 6))
                 );
-                if (match) updateProd(match.id, { lastPrice: match.currentPrice, currentPrice: s.price });
-                else saveProd({ name: s.name, currentPrice: s.price, lastPrice: s.price, isNeeded: false, quantity: 1 });
+                if (match) {
+                    updateProd(match.id, {
+                        lastPrice: match.currentPrice,
+                        currentPrice: s.price,
+                        priceHistory: [...(match.priceHistory || []), { price: match.currentPrice, date: new Date().toISOString() }]
+                    });
+                } else {
+                    saveProd({ name: s.name, currentPrice: s.price, lastPrice: s.price, isNeeded: false, quantity: 1, priceHistory: [] });
+                }
             }
             setScanResult(null); setPreviewUrl(null); setView('catalogue');
         };
 
-        // ── Derived ───────────────────────────────────────────────────────────
-        const shoppingList = useMemo(() => products.filter(p => p.isNeeded), [products]);
+        const now = new Date();
+        const shoppingList  = useMemo(() => products.filter(p => p.isNeeded), [products]);
         const shoppingTotal = useMemo(() => shoppingList.reduce((s, p) => s + p.currentPrice * (p.quantity || 1), 0), [shoppingList]);
-        const filteredProducts = useMemo(() => {
-            const q = search.toLowerCase();
-            return products
-                .filter(p => p.name.toLowerCase().includes(q))
-                .sort((a, b) => a.name.localeCompare(b.name));
-        }, [products, search]);
-        const monthTotal = useMemo(() => {
-            const now = new Date();
-            return receipts.filter(r => {
-                const d = new Date(r.date);
-                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-            }).reduce((s, r) => s + (r.total || 0), 0);
-        }, [receipts]);
+        const monthTotal    = useMemo(() => receipts.filter(r => { const d = new Date(r.date); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).reduce((s, r) => s + (r.total || 0), 0), [receipts]);
+        const prevMonthTotal = useMemo(() => { const pm = new Date(now.getFullYear(), now.getMonth() - 1, 1); return receipts.filter(r => { const d = new Date(r.date); return d.getMonth() === pm.getMonth() && d.getFullYear() === pm.getFullYear(); }).reduce((s, r) => s + (r.total || 0), 0); }, [receipts]);
+        const monthDelta    = prevMonthTotal > 0 ? ((monthTotal - prevMonthTotal) / prevMonthTotal * 100).toFixed(0) : null;
+        const monthReceipts = useMemo(() => receipts.filter(r => { const d = new Date(r.date); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).length, [receipts]);
+        const filteredProducts = useMemo(() => products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)), [products, search]);
+        const priceChangedProducts = useMemo(() => products.filter(p => p.lastPrice && p.lastPrice !== p.currentPrice).sort((a, b) => Math.abs(parseFloat(priceDelta(b.currentPrice, b.lastPrice) || 0)) - Math.abs(parseFloat(priceDelta(a.currentPrice, a.lastPrice) || 0))), [products]);
 
-        // ── Loading ───────────────────────────────────────────────────────────
         if (loading) return (
-            <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-                <div className="loader-ring"></div>
-                <span style={{ fontFamily: 'DM Mono', fontSize: 12, color: 'var(--muted)', letterSpacing: '0.1em' }}>CHARGEMENT...</span>
+            <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <div style={{ width: 32, height: 32, border: '2px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }}></div>
+                <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 500 }}>Chargement…</span>
             </div>
         );
 
-        // ── Render ────────────────────────────────────────────────────────────
+        const HeroBanner = () => (
+            <div className="dashboard-hero">
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
+                    {now.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })}
+                </div>
+                <div className="hero-amount">{fmt(monthTotal)} €</div>
+                <div style={{ marginTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span className="stat-pill"><Icon name="receipt" size={12} color="white"/> {monthReceipts} ticket{monthReceipts > 1 ? 's' : ''}</span>
+                    {monthDelta !== null && (
+                        <span className="stat-pill">
+                            <Icon name={parseFloat(monthDelta) >= 0 ? 'trend_up' : 'trend_down'} size={12} color="white"/>
+                            {parseFloat(monthDelta) >= 0 ? '+' : ''}{monthDelta}% vs mois dernier
+                        </span>
+                    )}
+                </div>
+            </div>
+        );
+
         return (
-            <div style={{ paddingBottom: 80, minHeight: '100vh' }}>
+            <div style={{ paddingBottom: 76, minHeight: '100vh' }}>
+
+                {/* ── ACCUEIL ── */}
+                {view === 'accueil' && (
+                    <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div className="fade-up"><HeroBanner /></div>
+
+                        <div className="fade-up-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <button className="quick-action" onClick={() => setView('scanner')}>
+                                <div className="qa-icon" style={{ background: '#eef1fe' }}><Icon name="camera" size={22} color="var(--accent)"/></div>
+                                <div>
+                                    <div style={{ fontWeight: 700, fontSize: 14 }}>Scanner</div>
+                                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>Ticket de caisse</div>
+                                </div>
+                            </button>
+                            <button className="quick-action" onClick={() => setView('liste')}>
+                                <div className="qa-icon" style={{ background: '#edfaf4' }}><Icon name="list" size={22} color="var(--down)"/></div>
+                                <div>
+                                    <div style={{ fontWeight: 700, fontSize: 14 }}>Ma liste</div>
+                                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{shoppingList.length > 0 ? `${shoppingList.length} articles` : 'Vide'}</div>
+                                </div>
+                            </button>
+                        </div>
+
+                        {priceChangedProducts.length > 0 && (
+                            <div className="fade-up-2">
+                                <div className="section-title">Variations récentes</div>
+                                <div className="card" style={{ overflow: 'hidden' }}>
+                                    {priceChangedProducts.slice(0, 5).map(p => {
+                                        const delta = priceDelta(p.currentPrice, p.lastPrice);
+                                        const isUp = parseFloat(delta) > 0;
+                                        return (
+                                            <div className="receipt-row" key={p.id}>
+                                                <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{p.name}</span>
+                                                <span style={{ fontFamily: 'DM Mono', fontSize: 12, color: 'var(--muted)', marginRight: 8 }}>{fmt(p.currentPrice)} €</span>
+                                                <span className={`var-badge ${isUp ? 'var-up' : 'var-down'}`}>{isUp ? '+' : ''}{delta}%</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {receipts.length > 0 && (
+                            <div className="fade-up-3">
+                                <div className="section-title">Derniers tickets</div>
+                                <div className="card" style={{ overflow: 'hidden' }}>
+                                    {[...receipts].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4).map(r => (
+                                        <div className="receipt-row" key={r.id}>
+                                            <div>
+                                                <div style={{ fontWeight: 600, fontSize: 14 }}>{new Date(r.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+                                                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{r.itemCount} articles</div>
+                                            </div>
+                                            <span style={{ fontFamily: 'DM Mono', fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{fmt(r.total)} €</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* ── CATALOGUE ── */}
                 {view === 'catalogue' && (
-                    <div className="fade-up" style={{ padding: '20px 16px' }}>
-                        <div className="page-header">
+                    <div className="fade-up" style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span className="page-title">Catalogue</span>
-                            <span className="chip accent">{products.length} produits</span>
+                            <span className="chip">{products.length} produits</span>
                         </div>
-
-                        {/* Add form */}
-                        <div className="card" style={{ padding: 14, marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            <input
-                                className="inp"
-                                placeholder="Nom du produit"
-                                value={newItem.name}
+                        <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <input className="inp" placeholder="Nom du produit" value={newItem.name}
                                 onChange={e => setNewItem({ ...newItem, name: e.target.value })}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter' && newItem.name && newItem.price) {
-                                        saveProd({ ...newItem, currentPrice: parseFloat(newItem.price), lastPrice: parseFloat(newItem.price), isNeeded: false, quantity: 1 });
-                                        setNewItem({ name: '', price: '' });
-                                    }
-                                }}
+                                onKeyDown={e => { if (e.key === 'Enter' && newItem.name && newItem.price) { saveProd({ name: newItem.name, currentPrice: parseFloat(newItem.price), lastPrice: parseFloat(newItem.price), isNeeded: false, quantity: 1, priceHistory: [] }); setNewItem({ name: '', price: '' }); } }}
                             />
                             <div style={{ display: 'flex', gap: 8 }}>
-                                <input
-                                    className="inp"
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="Prix €"
-                                    value={newItem.price}
-                                    onChange={e => setNewItem({ ...newItem, price: e.target.value })}
-                                    style={{ flex: 1 }}
-                                />
-                                <button className="btn-accent" onClick={() => {
-                                    if (!newItem.name || !newItem.price) return;
-                                    saveProd({ ...newItem, currentPrice: parseFloat(newItem.price), lastPrice: parseFloat(newItem.price), isNeeded: false, quantity: 1 });
-                                    setNewItem({ name: '', price: '' });
-                                }}>
-                                    Ajouter
-                                </button>
+                                <input className="inp" type="number" step="0.01" placeholder="Prix €" value={newItem.price} onChange={e => setNewItem({ ...newItem, price: e.target.value })} style={{ flex: 1 }}/>
+                                <button className="btn-primary" onClick={() => { if (!newItem.name || !newItem.price) return; saveProd({ name: newItem.name, currentPrice: parseFloat(newItem.price), lastPrice: parseFloat(newItem.price), isNeeded: false, quantity: 1, priceHistory: [] }); setNewItem({ name: '', price: '' }); }}>Ajouter</button>
                             </div>
                         </div>
-
-                        {/* Search */}
-                        {products.length > 4 && (
-                            <input
-                                className="inp"
-                                placeholder="Rechercher..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                style={{ marginBottom: 10 }}
-                            />
-                        )}
-
-                        {/* List */}
+                        {products.length > 4 && <input className="inp" placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)} />}
                         <div className="card" style={{ overflow: 'hidden' }}>
-                            {filteredProducts.length === 0 && (
-                                <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-                                    Aucun produit
-                                </div>
-                            )}
-                            {filteredProducts.map(p => (
-                                <div className="product-row" key={p.id}>
-                                    <button
-                                        className={`check-btn ${p.isNeeded ? 'checked' : ''}`}
-                                        onClick={() => updateProd(p.id, { isNeeded: !p.isNeeded })}
-                                    >
-                                        {p.isNeeded && <Icon name="check" size={14} style={{ color: '#0c0c0e' }} />}
-                                    </button>
-                                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: p.isNeeded ? 'var(--text)' : 'var(--muted)' }}>
-                                        {p.name}
-                                    </span>
-                                    {p.lastPrice && p.lastPrice !== p.currentPrice && (
-                                        <span style={{ fontFamily: 'DM Mono', fontSize: 10, color: 'var(--muted)', textDecoration: 'line-through', marginRight: 4 }}>
-                                            {p.lastPrice.toFixed(2)}
-                                        </span>
-                                    )}
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="price-inp"
-                                        defaultValue={p.currentPrice?.toFixed(2)}
-                                        key={p.currentPrice}
-                                        onBlur={e => updateProd(p.id, { lastPrice: p.currentPrice, currentPrice: parseFloat(e.target.value) })}
-                                    />
-                                    <button className="del-btn" onClick={() => { if (confirm('Supprimer ?')) deleteProd(p.id); }}>
-                                        <Icon name="trash" size={15} />
-                                    </button>
-                                </div>
-                            ))}
+                            {filteredProducts.length === 0 && <div className="empty"><div className="empty-icon"><Icon name="tag" size={24} color="var(--border)"/></div>Aucun produit</div>}
+                            {filteredProducts.map(p => {
+                                const delta = priceDelta(p.currentPrice, p.lastPrice);
+                                const isUp = delta && parseFloat(delta) > 0;
+                                return (
+                                    <div className="product-row" key={p.id}>
+                                        <button className={`check-btn ${p.isNeeded ? 'checked' : ''}`} onClick={() => updateProd(p.id, { isNeeded: !p.isNeeded })}>
+                                            {p.isNeeded && <Icon name="check" size={13} color="white"/>}
+                                        </button>
+                                        <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: p.isNeeded ? 'var(--text)' : 'var(--text-2)' }}>{p.name}</span>
+                                        {delta && <span className={`var-badge ${isUp ? 'var-up' : 'var-down'}`}>{isUp ? '+' : ''}{delta}%</span>}
+                                        <input type="number" step="0.01" className="price-inp"
+                                            defaultValue={p.currentPrice?.toFixed(2)}
+                                            key={p.id + '-' + p.currentPrice}
+                                            onBlur={e => { const val = parseFloat(e.target.value); if (!isNaN(val) && val !== p.currentPrice) updateProd(p.id, { lastPrice: p.currentPrice, currentPrice: val, priceHistory: [...(p.priceHistory || []), { price: p.currentPrice, date: new Date().toISOString() }] }); }}
+                                        />
+                                        <button className="del-btn" onClick={() => { if (confirm('Supprimer ?')) deleteProd(p.id); }}><Icon name="trash" size={15}/></button>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
 
                 {/* ── LISTE ── */}
                 {view === 'liste' && (
-                    <div className="fade-up" style={{ padding: '20px 16px' }}>
-                        <div className="page-header">
-                            <span className="page-title">Ma Liste</span>
-                            <span className="chip">{shoppingList.length} articles</span>
+                    <div className="fade-up" style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span className="page-title">Ma liste</span>
+                            <span style={{ fontFamily: 'DM Mono', fontSize: 13, color: 'var(--muted)' }}>{shoppingList.length} articles</span>
                         </div>
-
-                        {/* Total */}
-                        <div className="total-bar" style={{ marginBottom: 14 }}>
+                        <div className="card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div>
-                                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 2 }}>Estimation</div>
-                                <div className="stat-amount" style={{ fontSize: 36 }}>{shoppingTotal.toFixed(2)} €</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>Estimation</div>
+                                <div style={{ fontFamily: 'DM Mono', fontSize: 28, fontWeight: 500, color: 'var(--accent)', letterSpacing: '-0.02em' }}>{fmt(shoppingTotal)} €</div>
                             </div>
                             {shoppingList.length > 0 && (
-                                <button
-                                    className="btn-accent"
-                                    onClick={async () => {
-                                        await addReceipt({ date: new Date().toISOString(), total: shoppingTotal, itemCount: shoppingList.length });
-                                        for (const item of shoppingList) updateProd(item.id, { isNeeded: false, quantity: 1 });
-                                        setView('stats');
-                                    }}
-                                    style={{ fontSize: 12, padding: '10px 16px' }}
-                                >
-                                    Terminer
-                                </button>
+                                <button className="btn-primary" style={{ fontSize: 13, padding: '10px 16px' }} onClick={async () => {
+                                    await addReceipt({ date: new Date().toISOString(), total: shoppingTotal, itemCount: shoppingList.length });
+                                    for (const item of shoppingList) updateProd(item.id, { isNeeded: false, quantity: 1 });
+                                    setView('accueil');
+                                }}>Terminer</button>
                             )}
                         </div>
-
-                        {/* Items */}
                         <div className="card" style={{ overflow: 'hidden' }}>
-                            {shoppingList.length === 0 && (
-                                <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-                                    Liste vide — coche des produits dans le catalogue
-                                </div>
-                            )}
+                            {shoppingList.length === 0 && <div className="empty"><div className="empty-icon"><Icon name="list" size={24} color="var(--border)"/></div>Coche des produits dans le catalogue</div>}
                             {shoppingList.map(item => (
                                 <div className="product-row" key={item.id}>
                                     <div className="qty-ctrl">
-                                        <button className="qty-btn" onClick={() => updateProd(item.id, { quantity: Math.max(1, (item.quantity || 1) - 1) })}>
-                                            <Icon name="minus" size={12} />
-                                        </button>
+                                        <button className="qty-btn" onClick={() => updateProd(item.id, { quantity: Math.max(1, (item.quantity || 1) - 1) })}><Icon name="minus" size={13}/></button>
                                         <span className="qty-val">{item.quantity || 1}</span>
-                                        <button className="qty-btn" onClick={() => updateProd(item.id, { quantity: (item.quantity || 1) + 1 })}>
-                                            <Icon name="plus" size={12} />
-                                        </button>
+                                        <button className="qty-btn" onClick={() => updateProd(item.id, { quantity: (item.quantity || 1) + 1 })}><Icon name="plus" size={13}/></button>
                                     </div>
-                                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500, paddingLeft: 10 }}>{item.name}</span>
-                                    <span className="price-tag">{(item.currentPrice * (item.quantity || 1)).toFixed(2)} €</span>
+                                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500, paddingLeft: 8 }}>{item.name}</span>
+                                    <span style={{ fontFamily: 'DM Mono', fontSize: 14, color: 'var(--accent)', fontWeight: 500 }}>{fmt(item.currentPrice * (item.quantity || 1))} €</span>
                                 </div>
                             ))}
                         </div>
@@ -784,148 +653,90 @@
 
                 {/* ── SCANNER ── */}
                 {view === 'scanner' && (
-                    <div className="fade-up" style={{ padding: '20px 16px' }}>
-                        <div className="page-header">
+                    <div className="fade-up" style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span className="page-title">Scanner</span>
-                            <span className="chip accent mono">Gemini 1.5</span>
+                            <span className="chip" style={{ fontFamily: 'DM Mono', fontSize: 10 }}>Gemini 2.5</span>
                         </div>
-
-                        {/* Preview */}
                         {previewUrl && (
-                            <div className="scan-preview" style={{ marginBottom: 14 }}>
-                                <img src={previewUrl} alt="ticket" />
-                                {isScanning && (
-                                    <div className="scan-overlay">
-                                        <div className="loader-ring"></div>
-                                        <span className="mono pulse-accent" style={{ fontSize: 11, letterSpacing: '0.1em' }}>ANALYSE EN COURS...</span>
-                                    </div>
-                                )}
+                            <div className="scan-preview">
+                                <img src={previewUrl} alt="ticket"/>
+                                {isScanning && <div className="scan-overlay"><div className="loader"></div><span style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>Analyse en cours…</span></div>}
                             </div>
                         )}
-
-                        {/* Drop zone */}
                         {!scanResult && !isScanning && (
-                            <label className="scan-drop">
-                                <div className="scan-icon-wrap">
-                                    <Icon name="camera" size={32} />
-                                </div>
+                            <label className="scan-zone">
+                                <div className="scan-icon"><Icon name="camera" size={28} color="var(--accent)"/></div>
                                 <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>
-                                        {previewUrl ? 'Changer de ticket' : 'Choisir un ticket'}
-                                    </div>
-                                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>Photo ou galerie</div>
+                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 3 }}>{previewUrl ? 'Changer de ticket' : 'Choisir un ticket'}</div>
+                                    <div style={{ fontSize: 13, color: 'var(--muted)' }}>Photo ou galerie</div>
                                 </div>
-                                <input
-                                    ref={fileRef}
-                                    type="file"
-                                    accept="image/*"
-                                    style={{ display: 'none' }}
-                                    onChange={handleFileSelect}
-                                />
+                                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileSelect}/>
                             </label>
                         )}
-
-                        {/* Results */}
                         {scanResult && !isScanning && (
                             <div className="card fade-up" style={{ overflow: 'hidden' }}>
-                                <div style={{
-                                    padding: '12px 16px',
-                                    borderBottom: '1px solid var(--border)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                                }}>
+                                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <Icon name="ok" size={16} style={{ color: 'var(--accent)' }} />
-                                        <span style={{ fontWeight: 700, fontSize: 14 }}>{scanResult.length} articles</span>
+                                        <Icon name="ok" size={16} color="var(--down)"/>
+                                        <span style={{ fontWeight: 700, fontSize: 14 }}>{scanResult.length} articles détectés</span>
                                     </div>
-                                    <button className="del-btn" onClick={() => { setScanResult(null); setPreviewUrl(null); }}>
-                                        <Icon name="x" size={16} />
-                                    </button>
+                                    <button className="del-btn" onClick={() => { setScanResult(null); setPreviewUrl(null); }}><Icon name="x" size={16}/></button>
                                 </div>
-                                <div className="results-scroll">
+                                <div style={{ maxHeight: 300, overflowY: 'auto' }}>
                                     {scanResult.map((it, i) => (
                                         <div className="scan-item" key={i}>
-                                            <span style={{ fontSize: 13, color: 'var(--text)', flex: 1, paddingRight: 12 }}>{it.name}</span>
-                                            <span className="price-tag">{it.price.toFixed(2)} €</span>
+                                            <span style={{ fontSize: 13, color: 'var(--text-2)', flex: 1, paddingRight: 12 }}>{it.name}</span>
+                                            <span style={{ fontFamily: 'DM Mono', fontSize: 13, color: 'var(--accent)', fontWeight: 500 }}>{fmt(it.price)} €</span>
                                         </div>
                                     ))}
                                 </div>
-                                <div style={{ padding: 14, display: 'flex', gap: 8, borderTop: '1px solid var(--border)' }}>
-                                    <button className="btn-ghost" style={{ flex: 1 }} onClick={() => { setScanResult(null); setPreviewUrl(null); }}>
-                                        Annuler
-                                    </button>
-                                    <button className="btn-accent" style={{ flex: 2 }} onClick={importScan}>
-                                        Importer dans le catalogue
-                                    </button>
+                                <div style={{ padding: 14, display: 'flex', gap: 8, borderTop: '1px solid var(--border-light)' }}>
+                                    <button className="btn-secondary" style={{ flex: 1 }} onClick={() => { setScanResult(null); setPreviewUrl(null); }}>Annuler</button>
+                                    <button className="btn-primary" style={{ flex: 2 }} onClick={importScan}>Importer dans le catalogue</button>
                                 </div>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* ── STATS ── */}
-                {view === 'stats' && (
-                    <div className="fade-up" style={{ padding: '20px 16px' }}>
-                        <div className="page-header">
-                            <span className="page-title">Budget</span>
-                        </div>
-
-                        {/* Month total */}
-                        <div className="stat-block" style={{ marginBottom: 14 }}>
-                            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>
-                                {new Date().toLocaleString('fr-FR', { month: 'long', year: 'numeric' })}
-                            </div>
-                            <div className="stat-amount">{monthTotal.toFixed(2)} €</div>
-                            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                                <span className="chip accent">{receipts.filter(r => {
-                                    const d = new Date(r.date);
-                                    const n = new Date();
-                                    return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
-                                }).length} tickets ce mois</span>
-                                <span className="chip">{receipts.length} total</span>
-                            </div>
-                        </div>
-
-                        {/* Receipts */}
+                {/* ── BUDGET ── */}
+                {view === 'budget' && (
+                    <div className="fade-up" style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <span className="page-title">Budget</span>
+                        <HeroBanner />
                         {receipts.length > 0 && (
-                            <div className="card" style={{ overflow: 'hidden' }}>
-                                <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-                                    Historique
-                                </div>
-                                {[...receipts].sort((a,b) => new Date(b.date)-new Date(a.date)).slice(0,10).map(r => (
-                                    <div className="receipt-row" key={r.id}>
-                                        <div>
-                                            <div style={{ fontSize: 13, fontWeight: 600 }}>
-                                                {new Date(r.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                            <>
+                                <div className="section-title" style={{ marginBottom: 0 }}>Historique</div>
+                                <div className="card" style={{ overflow: 'hidden' }}>
+                                    {[...receipts].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 15).map(r => (
+                                        <div className="receipt-row" key={r.id}>
+                                            <div>
+                                                <div style={{ fontWeight: 600, fontSize: 14 }}>{new Date(r.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+                                                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{r.itemCount} articles</div>
                                             </div>
-                                            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                                                {r.itemCount} articles
-                                            </div>
+                                            <span style={{ fontFamily: 'DM Mono', fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>{fmt(r.total)} €</span>
                                         </div>
-                                        <span className="price-tag">{(r.total || 0).toFixed(2)} €</span>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
-
-                        {receipts.length === 0 && (
-                            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-                                Pas encore de tickets enregistrés
-                            </div>
-                        )}
+                        {receipts.length === 0 && <div className="card"><div className="empty"><div className="empty-icon"><Icon name="chart" size={24} color="var(--border)"/></div>Aucun ticket enregistré</div></div>}
                     </div>
                 )}
 
                 {/* ── NAV ── */}
                 <nav className="nav-bar">
                     {[
-                        { id: 'catalogue', icon: 'grid',    label: 'Catalogue' },
-                        { id: 'liste',     icon: 'list',    label: 'Liste', badge: shoppingList.length },
-                        { id: 'scanner',   icon: 'camera',  label: 'Scanner' },
-                        { id: 'stats',     icon: 'chart',   label: 'Budget' },
+                        { id: 'accueil',   icon: 'home',   label: 'Accueil' },
+                        { id: 'catalogue', icon: 'grid',   label: 'Catalogue' },
+                        { id: 'liste',     icon: 'list',   label: 'Liste', badge: shoppingList.length },
+                        { id: 'scanner',   icon: 'camera', label: 'Scanner' },
+                        { id: 'budget',    icon: 'chart',  label: 'Budget' },
                     ].map(tab => (
                         <button key={tab.id} className={`nav-btn ${view === tab.id ? 'active' : ''}`} onClick={() => setView(tab.id)}>
                             {tab.badge > 0 && <span className="nav-badge">{tab.badge}</span>}
-                            <Icon name={tab.icon} size={20} />
+                            <Icon name={tab.icon} size={21} color={view === tab.id ? 'var(--accent)' : 'var(--muted)'}/>
                             {tab.label}
                         </button>
                     ))}
