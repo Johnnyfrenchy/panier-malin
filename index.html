@@ -169,6 +169,17 @@
             });
         }, []);
 
+        const signInWithGoogle = async () => {
+            const { auth, GoogleAuthProvider, signInWithPopup } = window.firebase;
+            const provider = new GoogleAuthProvider();
+            try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); }
+        };
+
+        const signOut = async () => {
+            const { auth, signOut: fbSignOut } = window.firebase;
+            try { await fbSignOut(auth); } catch(e) { console.error(e); }
+        };
+
         useEffect(() => {
             if (!user || !familyId || !window.firebase) return;
             const { db, collection, onSnapshot } = window.firebase;
@@ -277,6 +288,7 @@
 
         return (
             <div style={{paddingBottom:76, minHeight:'100vh'}}>
+                <button onClick={signOut} style={{position:'fixed', top:12, right:12, zIndex:200, background:'var(--sf)', border:'1px solid var(--bd)', borderRadius:10, padding:'6px 12px', fontFamily:'Figtree,sans-serif', fontSize:12, fontWeight:600, color:'var(--mu)', cursor:'pointer', boxShadow:'var(--sh)'}} title="Se déconnecter">Déconnexion</button>
 
                 {view==='accueil' && (
                     <div style={{padding:'20px 16px', display:'flex', flexDirection:'column', gap:14}}>
