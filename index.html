@@ -4,6 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Panier Malin">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.svg">
     <title>Panier Malin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -87,7 +91,7 @@
 ```
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -102,7 +106,8 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    window.firebase = { auth, db, signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy };
+    const googleProvider = new GoogleAuthProvider();
+    window.firebase = { auth, db, signInWithPopup, googleProvider, signOut, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy };
 </script>
 
 <script type="text/babel">
@@ -135,6 +140,7 @@
 
     const App = () => {
         const [user, setUser]         = useState(null);
+        const [familyId, setFamilyId] = useState(null);
         const [view, setView]         = useState('accueil');
         const [products, setProducts] = useState([]);
         const [receipts, setReceipts] = useState([]);
@@ -144,19 +150,29 @@
         const [preview, setPreview]   = useState(null);
         const [newItem, setNewItem]   = useState({name:'', price:''});
         const [search, setSearch]     = useState('');
+        const [shareInput, setShareInput] = useState('');
         const fileRef = useRef();
 
         useEffect(() => {
             if (!window.firebase) return;
-            const { auth, signInAnonymously, onAuthStateChanged } = window.firebase;
-            signInAnonymously(auth).catch(console.error);
-            return onAuthStateChanged(auth, u => { setUser(u); if (!u) setLoading(false); });
+            const { auth, onAuthStateChanged } = window.firebase;
+            return onAuthStateChanged(auth, u => {
+                if (u) {
+                    const stored = localStorage.getItem('panier-family-' + u.uid);
+                    setFamilyId(stored || u.uid);
+                    setUser(u);
+                } else {
+                    setUser(null);
+                    setFamilyId(null);
+                    setLoading(false);
+                }
+            });
         }, []);
 
         useEffect(() => {
-            if (!user || !window.firebase) return;
+            if (!user || !familyId || !window.firebase) return;
             const { db, collection, onSnapshot } = window.firebase;
-            const base = 'artifacts/' + APP_ID + '/users/' + user.uid;
+            const base = 'artifacts/' + APP_ID + '/users/' + familyId;
             const u1 = onSnapshot(collection(db, base, 'products'), snap => {
                 setProducts(snap.docs.map(d => ({id: d.id, ...d.data()})));
                 setLoading(false);
@@ -165,15 +181,15 @@
                 setReceipts(snap.docs.map(d => ({id: d.id, ...d.data()})));
             });
             return () => { u1(); u2(); };
-        }, [user]);
+        }, [user, familyId]);
 
-        const ref  = (...p) => window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, ...p);
+        const ref  = (...p) => window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', familyId, ...p);
         const upd  = (id, f) => window.firebase.updateDoc(ref('products', id), f);
         const del  = id => window.firebase.deleteDoc(ref('products', id));
         const save = p => { const id = p.id || Date.now().toString(); window.firebase.setDoc(ref('products', id), {...p, id}, {merge: true}); };
         const addRec = d => {
             const { db, collection, addDoc, serverTimestamp } = window.firebase;
-            return addDoc(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'receipts'), {...d, timestamp: serverTimestamp()});
+            return addDoc(collection(db, 'artifacts', APP_ID, 'users', familyId, 'receipts'), {...d, timestamp: serverTimestamp()});
         };
 
         const resize = file => new Promise(resolve => {
@@ -236,10 +252,26 @@
         const filtered  = useMemo(() => products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name)), [products, search]);
         const changed   = useMemo(() => products.filter(p => p.lastPrice && p.lastPrice!==p.currentPrice).sort((a,b) => Math.abs(parseFloat(calcDelta(b.currentPrice,b.lastPrice)||0)) - Math.abs(parseFloat(calcDelta(a.currentPrice,a.lastPrice)||0))), [products]);
 
-        if (loading) return (
+        if (loading || (user && !familyId)) return (
             <div style={{height:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12}}>
                 <div style={{width:32, height:32, border:'2px solid #e4e4e8', borderTopColor:'#3b6ef5', borderRadius:'50%', animation:'spin .7s linear infinite'}}></div>
                 <span style={{color:'#8e8e9a', fontSize:13, fontWeight:500}}>Chargement…</span>
+            </div>
+        );
+
+        if (!user) return (
+            <div style={{height:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'32px 24px', gap:28, background:'var(--bg)'}}>
+                <div style={{width:90, height:90, borderRadius:26, background:'var(--ac)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 28px rgba(59,110,245,.35)'}}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                </div>
+                <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:30, fontWeight:800, letterSpacing:'-.03em', color:'var(--tx)'}}>Panier Malin</div>
+                    <div style={{color:'var(--mu)', marginTop:6, fontSize:15}}>Gérez vos courses en famille</div>
+                </div>
+                <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, window.firebase.googleProvider).catch(e => alert('Connexion impossible : ' + e.message))} style={{background:'#fff', border:'1.5px solid var(--bd)', borderRadius:14, padding:'13px 22px', display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontWeight:600, fontSize:15, color:'var(--tx)', boxShadow:'var(--sh)', width:'100%', maxWidth:320, justifyContent:'center'}}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Continuer avec Google
+                </button>
             </div>
         );
 
@@ -300,6 +332,36 @@
                                 </div>
                             </div>
                         )}
+                        <div>
+                            <div className="st" style={{marginTop:4}}>Famille</div>
+                            <div className="card" style={{padding:16, display:'flex', flexDirection:'column', gap:12}}>
+                                <div style={{display:'flex', alignItems:'center', gap:10}}>
+                                    {user.photoURL && <img src={user.photoURL} style={{width:34, height:34, borderRadius:'50%'}} alt=""/>}
+                                    <div style={{flex:1, minWidth:0}}>
+                                        <div style={{fontWeight:600, fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{user.displayName || user.email}</div>
+                                        <div style={{fontSize:11, color:'var(--mu)'}}>{familyId===user.uid ? 'Données personnelles' : <span style={{color:'var(--dn)', fontWeight:600}}>✓ Partage actif</span>}</div>
+                                    </div>
+                                    <button className="bs" style={{fontSize:11, padding:'6px 10px', flexShrink:0}} onClick={() => window.firebase.signOut(window.firebase.auth)}>Déco.</button>
+                                </div>
+                                {familyId===user.uid ? (
+                                    <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                                        <div style={{fontSize:12, color:'var(--mu)'}}>Votre code à partager avec Mariana :</div>
+                                        <div style={{fontFamily:'DM Mono', fontSize:12, background:'var(--sf2)', padding:'8px 12px', borderRadius:8, letterSpacing:'.04em', wordBreak:'break-all'}}>{user.uid.slice(0,16)}</div>
+                                        <div style={{fontSize:12, color:'var(--mu)', marginTop:4}}>Ou entrez le code de Mariana :</div>
+                                        <div style={{display:'flex', gap:8}}>
+                                            <input className="inp" style={{fontSize:13}} placeholder="Code famille…" value={shareInput} onChange={e => setShareInput(e.target.value)}/>
+                                            <button className="bp" style={{whiteSpace:'nowrap', padding:'10px 14px'}} onClick={() => { const c=shareInput.trim(); if (c) { localStorage.setItem('panier-family-'+user.uid, c); setFamilyId(c); setShareInput(''); } }}>OK</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                                        <div style={{fontSize:12, color:'var(--mu)'}}>Données partagées — code :</div>
+                                        <div style={{fontFamily:'DM Mono', fontSize:12, background:'var(--dnb)', padding:'8px 12px', borderRadius:8, color:'var(--dn)', letterSpacing:'.04em', wordBreak:'break-all'}}>{familyId.slice(0,16)}</div>
+                                        <button className="bs" style={{fontSize:12, marginTop:4}} onClick={() => { localStorage.removeItem('panier-family-'+user.uid); setFamilyId(user.uid); }}>Revenir à mes données</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 )}
 
