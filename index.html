@@ -4,36 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Panier Malin</title>
-    <!-- Tailwind CSS pour un design moderne -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Bibliothèques React et Babel -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-            overflow-x: hidden;
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
         .animate-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Suppression des flèches sur les inputs de prix */
-        input[type="number"]::-webkit-inner-spin-button, 
-        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
 
-    <!-- Configuration et Initialisation Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Vos identifiants Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyDQ2qyBeT_iLuCF3UEmQ2S93z8Qlv6uJSI",
             authDomain: "panier-malin-c8c25.firebaseapp.com",
@@ -46,16 +36,12 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
-        // Export global pour React
-        window.firebase = { auth, db, signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp };
+        window.firebase = { auth, db, signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy };
     </script>
 
-    <!-- Logique Applicative React -->
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // Composant pour afficher les icônes sans dépendre d'une librairie externe lente
         const Icon = ({ name, size = 24, className = "" }) => {
             const icons = {
                 Plus: <path d="M12 5v14M5 12h14" />,
@@ -95,47 +81,36 @@
             const [isScanning, setIsScanning] = useState(false);
             const [scanResult, setScanResult] = useState(null);
             const [previewUrl, setPreviewUrl] = useState(null);
-            const [errorMsg, setErrorMsg] = useState(null);
             const [newItem, setNewItem] = useState({ name: '', price: '', category: 'Épicerie' });
 
             useEffect(() => {
                 if (!window.firebase) return;
                 const { auth, onAuthStateChanged, signInAnonymously } = window.firebase;
                 
-                const initAuth = async () => {
-                    try {
-                        await signInAnonymously(auth);
-                    } catch (e) {
-                        console.error("Auth error", e);
-                        if (e.code === 'auth/configuration-not-found') {
-                            setErrorMsg("Action requise : Allez dans la console Firebase > Authentication > Sign-in method et activez le mode 'Anonyme'.");
-                        } else {
-                            setErrorMsg("Erreur de connexion : " + e.message);
-                        }
-                        setLoading(false);
+                signInAnonymously(auth).catch(e => {
+                    console.error("Auth error", e);
+                    if (e.code === 'auth/configuration-not-found') {
+                        alert("Erreur Firebase : Allez dans Authentication > Sign-in method et activez 'Anonyme'.");
                     }
-                };
-                
-                initAuth();
-                
-                return onAuthStateChanged(auth, u => { 
-                    setUser(u); 
-                    if(u) setErrorMsg(null);
-                    if(!u && !loading) setLoading(false); 
                 });
+
+                return onAuthStateChanged(auth, u => { setUser(u); if(!u && !loading) setLoading(false); });
             }, []);
 
             useEffect(() => {
                 if (!user || !window.firebase) return;
                 const { db, collection, onSnapshot } = window.firebase;
+                
                 const unsubProd = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'products'), (snap) => {
                     const items = []; snap.forEach(d => items.push({ id: d.id, ...d.data() }));
                     setProducts(items); setLoading(false);
                 }, () => setLoading(false));
+
                 const unsubRec = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'receipts'), (snap) => {
                     const items = []; snap.forEach(d => items.push({ id: d.id, ...d.data() }));
                     setReceipts(items);
                 });
+
                 return () => { unsubProd(); unsubRec(); };
             }, [user]);
 
@@ -154,18 +129,18 @@
                 return new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.readAsDataURL(file);
-                    reader.onload = (event) => {
+                    reader.onload = (e) => {
                         const img = new Image();
-                        img.src = event.target.result;
+                        img.src = e.target.result;
                         img.onload = () => {
                             const canvas = document.createElement('canvas');
-                            const MAX_WIDTH = 1024;
+                            const MAX_WIDTH = 1200;
                             const scale = MAX_WIDTH / img.width;
                             canvas.width = MAX_WIDTH;
                             canvas.height = img.height * scale;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            resolve(canvas.toDataURL('image/jpeg', 0.8));
+                            resolve(canvas.toDataURL('image/jpeg', 0.85));
                         };
                     };
                 });
@@ -176,18 +151,37 @@
                 if (!file) return;
                 
                 setIsScanning(true);
-                setPreviewUrl(URL.createObjectURL(file)); 
+                setPreviewUrl(URL.createObjectURL(file));
                 
                 try {
                     const compressedBase64 = await resizeImage(file);
-                    const prompt = `Analyse ce ticket de caisse et extrais chaque article avec son nom et son prix. Retourne UNIQUEMENT un JSON structuré : { "items": [ { "name": "string", "price": number } ] }`;
+                    const prompt = `Analyse ce ticket de caisse. Extrais chaque article avec son nom et son prix. Retourne UNIQUEMENT un JSON : { "items": [ { "name": "...", "price": 0.00 } ] }`;
                     
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                         method: 'POST', 
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
                             contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: compressedBase64.split(',')[1] } }] }],
-                            generationConfig: { responseMimeType: "application/json" }
+                            generationConfig: { 
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        items: {
+                                            type: "ARRAY",
+                                            items: {
+                                                type: "OBJECT",
+                                                properties: {
+                                                    name: { type: "STRING" },
+                                                    price: { type: "NUMBER" }
+                                                },
+                                                required: ["name", "price"]
+                                            }
+                                        }
+                                    },
+                                    required: ["items"]
+                                }
+                            }
                         })
                     });
                     
@@ -196,7 +190,7 @@
                     const data = JSON.parse(jsonText);
                     setScanResult(data.items);
                 } catch (err) {
-                    alert("Impossible de lire ce ticket. Prenez une photo plus stable.");
+                    alert("Erreur de lecture. Photo trop floue ou ticket illisible.");
                     console.error(err);
                 } finally {
                     setIsScanning(false);
@@ -213,50 +207,41 @@
                 }).reduce((s, r) => s + (r.total || 0), 0);
             }, [receipts]);
 
-            if (loading) return <div className="h-screen flex items-center justify-center font-bold text-slate-400 italic">Ouverture de Panier Malin...</div>;
+            if (loading) return <div className="h-screen flex items-center justify-center font-bold text-slate-400 italic animate-pulse">Ouverture de Panier Malin...</div>;
 
             return (
                 <div className="pb-24 md:pb-0 md:pl-64 min-h-screen">
-                    {/* Navigation Bar */}
-                    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-50 md:top-0 md:w-64 md:flex-col md:justify-start md:border-r md:p-6 md:space-y-4">
+                    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-50 md:top-0 md:w-64 md:flex-col md:justify-start md:border-r md:p-6 md:space-y-4 shadow-lg md:shadow-none">
                         <div className="hidden md:flex items-center space-x-3 mb-8 text-indigo-600 font-black text-xl">
                             <Icon name="ShoppingCart"/><h1 className="text-slate-800">Panier Malin</h1>
                         </div>
-                        <button onClick={()=>setView('inventory')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl ${view==='inventory'?'text-indigo-600 bg-indigo-50 font-bold':'text-slate-400'}`}><Icon name="LayoutDashboard"/><span>Catalogue</span></button>
-                        <button onClick={()=>setView('shopping')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl relative ${view==='shopping'?'text-indigo-600 bg-indigo-50 font-bold':'text-slate-400'}`}><Icon name="ListTodo"/><span>Ma Liste</span>{shoppingList.length>0&&<span className="absolute top-2 right-4 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold border-2 border-white">{shoppingList.length}</span>}</button>
-                        <button onClick={()=>setView('scan')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl ${view==='scan'?'text-indigo-600 bg-indigo-50 font-bold':'text-slate-400'}`}><Icon name="Camera"/><span>Scanner</span></button>
-                        <button onClick={()=>setView('stats')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl ${view==='stats'?'text-indigo-600 bg-indigo-50 font-bold':'text-slate-400'}`}><Icon name="PieChart"/><span>Stats</span></button>
+                        <button onClick={()=>setView('inventory')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-2xl transition-all ${view==='inventory'?'text-indigo-600 bg-indigo-50 font-bold shadow-sm':'text-slate-400'}`}><Icon name="LayoutDashboard"/><span>Catalogue</span></button>
+                        <button onClick={()=>setView('shopping')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl relative transition-all ${view==='shopping'?'text-indigo-600 bg-indigo-50 font-bold shadow-sm':'text-slate-400'}`}><Icon name="ListTodo"/><span>Ma Liste</span>{shoppingList.length>0&&<span className="absolute top-2 right-4 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold border-2 border-white">{shoppingList.length}</span>}</button>
+                        <button onClick={()=>setView('scan')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl transition-all ${view==='scan'?'text-indigo-600 bg-indigo-50 font-bold shadow-sm':'text-slate-400'}`}><Icon name="Camera"/><span>Scanner</span></button>
+                        <button onClick={()=>setView('stats')} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-xl transition-all ${view==='stats'?'text-indigo-600 bg-indigo-50 font-bold shadow-sm':'text-slate-400'}`}><Icon name="PieChart"/><span>Stats</span></button>
                     </nav>
 
                     <main className="p-6 max-w-4xl mx-auto animate-in">
-                        {errorMsg && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl mb-6 shadow-sm flex items-start space-x-3 animate-in">
-                                <Icon name="ShieldCheck" className="mt-1 flex-shrink-0" size={20} />
-                                <span className="text-sm font-medium">{errorMsg}</span>
-                            </div>
-                        )}
-
-                        {/* Vue Catalogue */}
                         {view === 'inventory' && (
                             <section className="space-y-6">
                                 <h2 className="text-2xl font-black">Mon Catalogue</h2>
-                                <div className="bg-white p-4 rounded-2xl shadow-sm border space-y-3">
-                                    <input type="text" placeholder="Nom du produit" className="w-full p-3 bg-slate-50 rounded-xl outline-none" value={newItem.name} onChange={e=>setNewItem({...newItem, name:e.target.value})} />
-                                    <div className="flex space-x-2">
-                                        <input type="number" placeholder="Prix €" className="flex-1 p-3 bg-slate-50 rounded-xl font-bold" value={newItem.price} onChange={e=>setNewItem({...newItem, price:e.target.value})} />
-                                        <button onClick={()=>{if(!newItem.name||!newItem.price)return; handleSave({...newItem, currentPrice:parseFloat(newItem.price), lastPrice:parseFloat(newItem.price), isNeeded:false, quantity:1}); setNewItem({name:'', price:'', category:'Épicerie'})}} className="bg-indigo-600 text-white px-6 rounded-xl font-bold shadow-md active:scale-95 transition-all">Ajouter</button>
+                                <div className="bg-white p-5 rounded-[2rem] shadow-sm border space-y-4">
+                                    <input type="text" placeholder="Nom du produit" className="w-full p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-100 transition-all" value={newItem.name} onChange={e=>setNewItem({...newItem, name:e.target.value})} />
+                                    <div className="flex space-x-3">
+                                        <input type="number" placeholder="Prix €" className="flex-1 p-4 bg-slate-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all" value={newItem.price} onChange={e=>setNewItem({...newItem, price:e.target.value})} />
+                                        <button onClick={()=>{if(!newItem.name||!newItem.price)return; handleSave({...newItem, currentPrice:parseFloat(newItem.price), lastPrice:parseFloat(newItem.price), isNeeded:false, quantity:1}); setNewItem({name:'', price:'', category:'Épicerie'})}} className="bg-indigo-600 text-white px-8 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">Ajouter</button>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="grid grid-cols-1 gap-3">
                                     {products.sort((a,b)=>a.name.localeCompare(b.name)).map(p => (
-                                        <div key={p.id} className="bg-white p-4 rounded-xl border flex items-center justify-between shadow-sm group">
-                                            <div className="flex items-center space-x-3">
-                                                <button onClick={()=>handleUpdate(p.id, {isNeeded: !p.isNeeded})} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${p.isNeeded?'bg-indigo-600 text-white shadow-md':'bg-slate-100 text-slate-300'}`}><Icon name={p.isNeeded?"CheckCircle2":"Plus"} size={18}/></button>
-                                                <span className="font-bold">{p.name}</span>
+                                        <div key={p.id} className="bg-white p-4 rounded-2xl border flex items-center justify-between shadow-sm group">
+                                            <div className="flex items-center space-x-4">
+                                                <button onClick={()=>handleUpdate(p.id, {isNeeded: !p.isNeeded})} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${p.isNeeded?'bg-indigo-600 text-white shadow-md':'bg-slate-100 text-slate-300 hover:bg-slate-200'}`}><Icon name={p.isNeeded?"CheckCircle2":"Plus"} size={20}/></button>
+                                                <span className="font-bold text-slate-700">{p.name}</span>
                                             </div>
                                             <div className="flex items-center space-x-4">
-                                                <input type="number" step="0.01" className="w-16 text-right font-black bg-slate-50 px-2 py-1 rounded" defaultValue={p.currentPrice} onBlur={e=>handleUpdate(p.id, {lastPrice:p.currentPrice, currentPrice:parseFloat(e.target.value)})} />
-                                                <button onClick={()=>{if(confirm('Supprimer ce produit ?')){const {db,doc,deleteDoc}=window.firebase; deleteDoc(doc(db,'artifacts',appId,'users',user.uid,'products',p.id));}}} className="text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><Icon name="Trash2" size={16}/></button>
+                                                <input type="number" step="0.01" className="w-20 text-right font-black bg-slate-50 px-3 py-2 rounded-xl border-transparent focus:border-indigo-200 transition-all outline-none" defaultValue={p.currentPrice} onBlur={e=>handleUpdate(p.id, {lastPrice:p.currentPrice, currentPrice:parseFloat(e.target.value)})} />
+                                                <button onClick={()=>{if(confirm('Supprimer ce produit ?')){const {db,doc,deleteDoc}=window.firebase; deleteDoc(doc(db,'artifacts',appId,'users',user.uid,'products',p.id));}}} className="text-slate-200 hover:text-red-500 transition-colors p-2"><Icon name="Trash2" size={18}/></button>
                                             </div>
                                         </div>
                                     ))}
@@ -264,28 +249,28 @@
                             </section>
                         )}
 
-                        {/* Vue Liste de Courses */}
                         {view === 'shopping' && (
                             <section className="space-y-6">
-                                <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-xl">
-                                    <p className="text-xs font-black uppercase opacity-70 tracking-widest mb-1">Total à payer</p>
-                                    <p className="text-5xl font-black">{shoppingTotal.toFixed(2)} €</p>
+                                <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
+                                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                                    <p className="text-xs font-black uppercase opacity-70 tracking-widest mb-2">Estimation panier</p>
+                                    <p className="text-6xl font-black tracking-tighter">{shoppingTotal.toFixed(2)} €</p>
                                 </div>
-                                <div className="bg-white rounded-[2rem] shadow-sm border overflow-hidden divide-y">
+                                <div className="bg-white rounded-[2.5rem] shadow-sm border overflow-hidden divide-y divide-slate-50">
                                     {shoppingList.map(item => (
-                                        <div key={item.id} className="p-5 flex items-center justify-between">
-                                            <div className="flex items-center space-x-4">
-                                                <div className="flex items-center bg-slate-50 p-1 rounded-lg">
-                                                    <button onClick={()=>handleUpdate(item.id, {quantity:Math.max(1,(item.quantity||1)-1)})} className="p-1"><Icon name="Minus" size={14}/></button>
-                                                    <span className="w-8 text-center font-bold">{item.quantity||1}</span>
-                                                    <button onClick={()=>handleUpdate(item.id, {quantity:(item.quantity||1)+1})} className="p-1"><Icon name="Plus" size={14}/></button>
+                                        <div key={item.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                                            <div className="flex items-center space-x-5">
+                                                <div className="flex items-center bg-slate-100 p-1 rounded-2xl">
+                                                    <button onClick={()=>handleUpdate(item.id, {quantity:Math.max(1,(item.quantity||1)-1)})} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm active:scale-90 transition-all"><Icon name="Minus" size={12}/></button>
+                                                    <span className="w-10 text-center font-black text-slate-800">{item.quantity||1}</span>
+                                                    <button onClick={()=>handleUpdate(item.id, {quantity:(item.quantity||1)+1})} className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm active:scale-90 transition-all"><Icon name="Plus" size={12}/></button>
                                                 </div>
-                                                <span className="font-bold text-lg">{item.name}</span>
+                                                <span className="font-bold text-xl text-slate-800">{item.name}</span>
                                             </div>
-                                            <span className="font-black text-indigo-600 text-xl">{(item.currentPrice*(item.quantity||1)).toFixed(2)} €</span>
+                                            <span className="font-black text-indigo-600 text-2xl">{(item.currentPrice*(item.quantity||1)).toFixed(2)} €</span>
                                         </div>
                                     ))}
-                                    {shoppingList.length === 0 && <div className="p-20 text-center text-slate-400 italic">Aucun article dans la liste.</div>}
+                                    {shoppingList.length === 0 && <div className="p-24 text-center text-slate-400 italic flex flex-col items-center"><Icon name="ShoppingCart" className="mb-4 opacity-20" size={48}/>Panier vide</div>}
                                 </div>
                                 {shoppingList.length > 0 && <button onClick={async ()=>{
                                     const {db,collection,addDoc,serverTimestamp}=window.firebase;
@@ -293,92 +278,76 @@
                                     await addDoc(collection(db,'artifacts',appId,'users',user.uid,'receipts'),{date:new Date().toISOString(),total,itemCount:shoppingList.length,timestamp:serverTimestamp()});
                                     for(const item of shoppingList) handleUpdate(item.id,{isNeeded:false,quantity:1});
                                     setView('stats');
-                                }} className="w-full bg-indigo-600 text-white py-6 rounded-3xl font-black shadow-xl hover:bg-indigo-700 active:scale-95 transition-all text-lg">Valider les achats</button>}
+                                }} className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black shadow-xl hover:bg-indigo-700 active:scale-95 transition-all text-xl uppercase tracking-widest mt-4">Terminer les courses</button>}
                             </section>
                         )}
 
-                        {/* Vue Scanner */}
                         {view === 'scan' && (
                             <section className="space-y-6">
                                 <h2 className="text-2xl font-black">Scanner un ticket</h2>
                                 
                                 {previewUrl && (
-                                    <div className="relative w-full h-56 bg-black rounded-[2rem] overflow-hidden mb-4 shadow-inner">
-                                        <img src={previewUrl} className="w-full h-full object-cover opacity-60" />
+                                    <div className="relative w-full h-72 bg-slate-900 rounded-[3rem] overflow-hidden mb-6 shadow-2xl group">
+                                        <img src={previewUrl} className="w-full h-full object-cover opacity-60 scale-105 group-hover:scale-100 transition-transform duration-500" />
                                         {isScanning && (
                                             <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                                                <Icon name="Loader2" size={50} className="mb-3" />
-                                                <span className="font-black text-lg tracking-wide">Analyse Gemini...</span>
+                                                <Icon name="Loader2" size={60} className="mb-4 opacity-80" />
+                                                <span className="font-black text-xl tracking-widest animate-pulse">ANALYSE IA...</span>
                                             </div>
                                         )}
                                     </div>
                                 )}
 
                                 {!scanResult && !isScanning && (
-                                    <div className="bg-white p-16 rounded-[2.5rem] border-2 border-dashed border-slate-200 flex flex-col items-center">
-                                        <div className="bg-indigo-50 p-6 rounded-3xl text-indigo-600 mb-6"><Icon name="Camera" size={40}/></div>
-                                        <label className="bg-indigo-600 text-white px-10 py-5 rounded-2xl font-black cursor-pointer shadow-xl active:scale-95 transition-all text-center">
-                                            Prendre une photo
+                                    <div className="bg-white p-20 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center hover:border-indigo-200 transition-colors">
+                                        <div className="bg-indigo-50 p-8 rounded-[2rem] text-indigo-600 mb-8 shadow-inner"><Icon name="Camera" size={50}/></div>
+                                        <label className="bg-indigo-600 text-white px-12 py-6 rounded-3xl font-black cursor-pointer shadow-2xl active:scale-95 transition-all text-center text-lg">
+                                            Choisir un ticket
                                             <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
                                         </label>
-                                        <p className="mt-4 text-xs text-slate-400">Le ticket sera analysé par l'IA</p>
+                                        <p className="mt-6 text-sm text-slate-400 font-bold uppercase tracking-widest">IA Gemini Pro 2.5</p>
                                     </div>
                                 )}
 
                                 {scanResult && (
-                                    <div className="bg-white rounded-[2rem] border overflow-hidden text-left shadow-2xl animate-in">
-                                        <div className="p-5 bg-green-50 font-black text-green-800 flex justify-between items-center px-8 border-b border-green-100">
-                                            <span>{scanResult.length} Articles détectés</span>
-                                            <button onClick={()=>{setScanResult(null); setPreviewUrl(null);}}><Icon name="X" size={24}/></button>
+                                    <div className="bg-white rounded-[3rem] border overflow-hidden text-left shadow-2xl animate-in">
+                                        <div className="p-8 bg-green-50 font-black text-green-800 flex justify-between items-center px-10 border-b border-green-100">
+                                            <div className="flex items-center space-x-3"><Icon name="CheckCircle2"/><span>{scanResult.length} Articles détectés</span></div>
+                                            <button onClick={()=>{setScanResult(null); setPreviewUrl(null);}} className="hover:bg-green-100 p-2 rounded-full transition-colors"><Icon name="X" size={24}/></button>
                                         </div>
-                                        <div className="divide-y max-h-72 overflow-y-auto bg-white">
-                                            {scanResult.map((it,i)=>(<div key={i} className="p-4 px-8 flex justify-between items-center font-bold text-slate-700"><span>{it.name}</span><span className="bg-slate-50 px-3 py-1 rounded-xl border">{it.price.toFixed(2)}€</span></div>))}
+                                        <div className="divide-y divide-slate-50 max-h-96 overflow-y-auto bg-white">
+                                            {scanResult.map((it,i)=>(<div key={i} className="p-5 px-10 flex justify-between items-center font-bold text-slate-700 hover:bg-slate-50 transition-colors"><span>{it.name}</span><span className="bg-slate-100 px-4 py-2 rounded-2xl border font-black text-indigo-600">{it.price.toFixed(2)}€</span></div>))}
                                         </div>
-                                        <div className="p-6 bg-slate-50 flex space-x-3 border-t">
-                                            <button onClick={()=>{setScanResult(null); setPreviewUrl(null);}} className="flex-1 bg-white border py-4 rounded-2xl font-bold">Effacer</button>
+                                        <div className="p-8 bg-slate-50 flex space-x-4 border-t">
+                                            <button onClick={()=>{setScanResult(null); setPreviewUrl(null);}} className="flex-1 bg-white border border-slate-200 py-5 rounded-3xl font-bold shadow-sm active:scale-95 transition-all">Effacer</button>
                                             <button onClick={async ()=>{
                                                 const total=scanResult.reduce((s,i)=>s+i.price,0);
                                                 const {db,collection,addDoc,serverTimestamp}=window.firebase;
                                                 await addDoc(collection(db,'artifacts',appId,'users',user.uid,'receipts'),{date:new Date().toISOString(),total,itemCount:scanResult.length,timestamp:serverTimestamp()});
                                                 for(const s of scanResult){
-                                                    const ex = products.find(p => p.name.toLowerCase().trim() === s.name.toLowerCase().trim());
+                                                    const ex = products.find(p => p.name.toLowerCase().trim().includes(s.name.toLowerCase().trim()) || s.name.toLowerCase().trim().includes(p.name.toLowerCase().trim()));
                                                     if(ex) handleUpdate(ex.id, {lastPrice: ex.currentPrice, currentPrice: s.price});
-                                                    else handleSave({name: s.name, currentPrice: s.price, lastPrice: s.price, isNeeded: false, quantity: 1});
+                                                    else handleSave({name: s.name, currentPrice: s.price, lastPrice: s.price, isNeeded: false, quantity: 1, category: 'Épicerie'});
                                                 }
                                                 setScanResult(null); setPreviewUrl(null); setView('inventory');
-                                            }} className="flex-1 bg-green-600 text-white py-4 rounded-2xl font-black shadow-lg">Tout enregistrer</button>
+                                            }} className="flex-1 bg-green-600 text-white py-5 rounded-3xl font-black shadow-xl active:scale-95 transition-all">Tout importer</button>
                                         </div>
                                     </div>
                                 )}
                             </section>
                         )}
 
-                        {/* Vue Statistiques */}
                         {view === 'stats' && (
                             <section className="space-y-6">
-                                <h2 className="text-2xl font-black">Budget Mensuel</h2>
-                                <div className="bg-white p-10 rounded-[3rem] border shadow-sm text-center">
-                                    <div className="bg-indigo-50 w-20 h-20 rounded-3xl flex items-center justify-center text-indigo-600 mx-auto mb-6"><Icon name="PieChart" size={40}/></div>
-                                    <p className="text-slate-400 font-bold uppercase text-xs mb-1 tracking-widest">Dépenses ce mois-ci</p>
-                                    <p className="text-6xl font-black text-indigo-600 tracking-tighter">{monthTotal.toFixed(2)} €</p>
-                                    <p className="mt-6 text-sm font-bold text-slate-400 bg-slate-100 py-2 px-4 rounded-full inline-block italic">Basé sur {receipts.length} tickets cloud</p>
-                                </div>
-                            </section>
-                        )}
-
-                        {/* Vue Sécurité */}
-                        {view === 'settings' && (
-                            <section className="space-y-6">
-                                <h2 className="text-2xl font-black">Données Cloud</h2>
-                                <div className="bg-white p-8 rounded-[2.5rem] border flex items-center space-x-5 shadow-sm">
-                                    <div className="bg-green-100 p-5 rounded-[1.5rem] text-green-600 shadow-inner"><Icon name="Cloud" size={32}/></div>
-                                    <div>
-                                        <p className="font-black text-lg">Cloud Personnel Actif</p>
-                                        <p className="text-xs text-slate-500 font-medium">Tes données sont sauvegardées en temps réel sur Firebase.</p>
-                                        <p className="text-[10px] text-slate-300 mt-1 uppercase font-black">ID: {user?.uid}</p>
+                                <h2 className="text-2xl font-black">Historique & Budget</h2>
+                                <div className="bg-white p-12 rounded-[3.5rem] border shadow-sm text-center relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-6 opacity-5"><Icon name="PieChart" size={120}/></div>
+                                    <p className="text-slate-400 font-bold uppercase text-xs mb-3 tracking-[0.2em]">Dépenses {new Date().toLocaleString('fr-FR', {month: 'long'})}</p>
+                                    <p className="text-7xl font-black text-indigo-600 tracking-tighter">{monthTotal.toFixed(2)} €</p>
+                                    <div className="mt-10 flex justify-center space-x-3">
+                                        <span className="bg-indigo-50 text-indigo-600 font-black text-[10px] uppercase px-4 py-2 rounded-full border border-indigo-100">{receipts.length} tickets cloud</span>
                                     </div>
                                 </div>
-                                <button onClick={()=>{const data={products,receipts}; const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download="panier-malin.json"; a.click();}} className="w-full bg-white border border-slate-200 py-5 rounded-3xl font-black flex items-center justify-center space-x-3 text-slate-600 shadow-sm active:scale-95 transition-all"><Icon name="Download" size={20}/><span>Exporter une sauvegarde</span></button>
                             </section>
                         )}
                     </main>
