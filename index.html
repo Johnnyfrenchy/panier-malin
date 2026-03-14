@@ -419,7 +419,7 @@
     import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
-        apiKey: "",
+        apiKey: "AIzaSyDQ2qyBeT_iLuCF3UEmQ2S93z8Qlv6uJSI",
         authDomain: "panier-malin-c8c25.firebaseapp.com",
         projectId: "panier-malin-c8c25",
         storageBucket: "panier-malin-c8c25.firebasestorage.app",
@@ -462,8 +462,6 @@
     };
 
     // ─── Config ───────────────────────────────────────────────────────────────
-    const GEMINI_KEY = "AIzaSyAuArHz7LW2h9qF78k2fEEjBhEagPDOtjI";
-    const GEMINI_MODEL = "gemini-2.5-flash";
     const APP_ID = "panier-malin-prod";
 
     // ─── App ──────────────────────────────────────────────────────────────────
@@ -552,7 +550,7 @@
                 const b64 = await resizeImage(file);
                 const prompt = `Analyse ce ticket de caisse. Extrais chaque article avec son nom et son prix. Retourne UNIQUEMENT un JSON : { "items": [ { "name": "...", "price": 0.00 } ] }`;
                 const res = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`,
+                    '/api/gemini',
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
