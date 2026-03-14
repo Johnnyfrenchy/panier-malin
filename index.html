@@ -5,108 +5,94 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Panier Malin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg:#f5f5f7; --surface:#fff; --surface2:#f0f0f2;
-            --border:#e4e4e8; --borderl:#efefef;
-            --accent:#3b6ef5; --accentl:#eef1fe; --accentd:#2554d4;
-            --text:#111116; --text2:#3a3a45; --muted:#8e8e9a;
-            --up:#e03a3a; --upbg:#fff0f0; --down:#1a9e6a; --downbg:#edfaf4;
-            --shadow:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
-        }
+        :root{--bg:#f5f5f7;--sf:#fff;--sf2:#f0f0f2;--bd:#e4e4e8;--bdl:#efefef;--ac:#3b6ef5;--acl:#eef1fe;--acd:#2554d4;--tx:#111116;--tx2:#3a3a45;--mu:#8e8e9a;--up:#e03a3a;--upb:#fff0f0;--dn:#1a9e6a;--dnb:#edfaf4;--sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
         *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Figtree',sans-serif;background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;overflow-x:hidden;min-height:100vh}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .fu{animation:fadeUp .2s ease-out both}
-        .fu1{animation:fadeUp .2s .05s ease-out both}
-        .fu2{animation:fadeUp .2s .10s ease-out both}
-        .fu3{animation:fadeUp .2s .15s ease-out both}
-        .nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--borderl);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
-        .nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 8px;font-size:10px;font-weight:600;color:var(--muted);position:relative;cursor:pointer;border:none;background:none;font-family:'Figtree',sans-serif;transition:color .15s}
-        .nb.on{color:var(--accent)}
-        .badge{position:absolute;top:6px;right:calc(50% - 20px);background:var(--up);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff}
-        .card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);border:1px solid var(--borderl)}
-        .inp{background:var(--surface2);border:1.5px solid transparent;border-radius:12px;color:var(--text);padding:12px 14px;font-family:'Figtree',sans-serif;font-size:15px;width:100%;outline:none;transition:border-color .15s,background .15s;font-weight:500}
-        .inp:focus{border-color:var(--accent);background:#fff}
-        .inp::placeholder{color:var(--muted);font-weight:400}
+        body{font-family:'Figtree',sans-serif;background:var(--bg);color:var(--tx);-webkit-tap-highlight-color:transparent;overflow-x:hidden;min-height:100vh}
+        @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes sp{to{transform:rotate(360deg)}}
+        .fu{animation:fu .2s ease-out both}.fu1{animation:fu .2s .05s ease-out both}.fu2{animation:fu .2s .1s ease-out both}.fu3{animation:fu .2s .15s ease-out both}
+        .nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--bdl);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+        .nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 8px;font-size:10px;font-weight:600;color:var(--mu);position:relative;cursor:pointer;border:none;background:none;font-family:'Figtree',sans-serif;transition:color .15s}
+        .nb.on{color:var(--ac)}
+        .bdg{position:absolute;top:6px;right:calc(50% - 20px);background:var(--up);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff}
+        .card{background:var(--sf);border-radius:16px;box-shadow:var(--sh);border:1px solid var(--bdl)}
+        .inp{background:var(--sf2);border:1.5px solid transparent;border-radius:12px;color:var(--tx);padding:12px 14px;font-family:'Figtree',sans-serif;font-size:15px;width:100%;outline:none;transition:border-color .15s,background .15s;font-weight:500}
+        .inp:focus{border-color:var(--ac);background:#fff}
+        .inp::placeholder{color:var(--mu);font-weight:400}
         input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
-        .btnp{background:var(--accent);color:#fff;font-weight:700;font-size:14px;border:none;border-radius:12px;padding:12px 20px;cursor:pointer;font-family:'Figtree',sans-serif;box-shadow:0 2px 8px rgba(59,110,245,.25);transition:background .15s,transform .1s}
-        .btnp:active{transform:scale(.97);background:var(--accentd)}
-        .btns{background:var(--surface2);color:var(--text2);font-weight:600;font-size:14px;border:1px solid var(--border);border-radius:12px;padding:12px 20px;cursor:pointer;font-family:'Figtree',sans-serif}
-        .row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--borderl);gap:10px}
+        .bp{background:var(--ac);color:#fff;font-weight:700;font-size:14px;border:none;border-radius:12px;padding:12px 20px;cursor:pointer;font-family:'Figtree',sans-serif;box-shadow:0 2px 8px rgba(59,110,245,.25);transition:background .15s,transform .1s}
+        .bp:active{transform:scale(.97);background:var(--acd)}
+        .bs{background:var(--sf2);color:var(--tx2);font-weight:600;font-size:14px;border:1px solid var(--bd);border-radius:12px;padding:12px 20px;cursor:pointer;font-family:'Figtree',sans-serif}
+        .row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bdl);gap:10px}
         .row:last-child{border-bottom:none}
-        .row:active{background:var(--surface2)}
-        .chk{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--border);background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s}
-        .chk.on{background:var(--accent);border-color:var(--accent)}
-        .vbadge{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;padding:2px 6px;border-radius:5px;flex-shrink:0}
-        .vup{color:var(--up);background:var(--upbg)}
-        .vdown{color:var(--down);background:var(--downbg)}
-        .pinp{background:transparent;border:none;font-family:'DM Mono',monospace;font-size:13px;color:var(--text2);width:60px;text-align:right;outline:none;padding:4px 6px;border-radius:6px;transition:background .15s}
-        .pinp:focus{background:var(--accentl);color:var(--accent)}
-        .delbtn{background:none;border:none;color:var(--border);cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color .15s}
-        .delbtn:hover{color:var(--up)}
-        .qty{display:flex;align-items:center;background:var(--surface2);border-radius:8px;overflow:hidden;flex-shrink:0}
-        .qbtn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--muted);cursor:pointer}
-        .qbtn:active{color:var(--accent);background:var(--accentl)}
-        .qval{font-family:'DM Mono',monospace;font-size:13px;min-width:24px;text-align:center;font-weight:500}
-        .scanzone{border:1.5px dashed var(--border);border-radius:20px;padding:52px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;background:#fff;transition:border-color .2s,background .2s}
-        .scanzone:hover{border-color:var(--accent);background:var(--accentl)}
-        .scanprev{position:relative;width:100%;height:200px;border-radius:16px;overflow:hidden;background:#000}
-        .scanprev img{width:100%;height:100%;object-fit:cover;opacity:.6}
-        .scanov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
-        .loader{width:32px;height:32px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
-        .hero{background:var(--accent);border-radius:20px;padding:24px;color:#fff;position:relative;overflow:hidden}
+        .row:active{background:var(--sf2)}
+        .chk{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--bd);background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s}
+        .chk.on{background:var(--ac);border-color:var(--ac)}
+        .vb{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;padding:2px 6px;border-radius:5px;flex-shrink:0}
+        .vup{color:var(--up);background:var(--upb)}.vdn{color:var(--dn);background:var(--dnb)}
+        .pi{background:transparent;border:none;font-family:'DM Mono',monospace;font-size:13px;color:var(--tx2);width:60px;text-align:right;outline:none;padding:4px 6px;border-radius:6px;transition:background .15s}
+        .pi:focus{background:var(--acl);color:var(--ac)}
+        .db{background:none;border:none;color:var(--bd);cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color .15s}
+        .db:hover{color:var(--up)}
+        .qty{display:flex;align-items:center;background:var(--sf2);border-radius:8px;overflow:hidden;flex-shrink:0}
+        .qb{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--mu);cursor:pointer}
+        .qb:active{color:var(--ac);background:var(--acl)}
+        .qv{font-family:'DM Mono',monospace;font-size:13px;min-width:24px;text-align:center;font-weight:500}
+        .sz{border:1.5px dashed var(--bd);border-radius:20px;padding:52px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;background:#fff;transition:border-color .2s,background .2s}
+        .sz:hover{border-color:var(--ac);background:var(--acl)}
+        .sp2{position:relative;width:100%;height:200px;border-radius:16px;overflow:hidden;background:#000}
+        .sp2 img{width:100%;height:100%;object-fit:cover;opacity:.6}
+        .sov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+        .ld{width:32px;height:32px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+        .hero{background:var(--ac);border-radius:20px;padding:24px;color:#fff;position:relative;overflow:hidden}
         .hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,255,255,.07);border-radius:50%}
-        .heroamt{font-family:'DM Mono',monospace;font-size:44px;font-weight:500;letter-spacing:-.02em;line-height:1}
-        .pill{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600}
-        .qa{background:#fff;border:1px solid var(--borderl);border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .1s;box-shadow:var(--shadow);text-align:left}
+        .ha{font-family:'DM Mono',monospace;font-size:44px;font-weight:500;letter-spacing:-.02em;line-height:1}
+        .pl{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600}
+        .qa{background:#fff;border:1px solid var(--bdl);border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .1s;box-shadow:var(--sh);text-align:left}
         .qa:active{transform:scale(.98)}
-        .qaico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-        .chip{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--accentl);color:var(--accent)}
-        .rrow{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--borderl)}
-        .rrow:last-child{border-bottom:none}
-        .stitle{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
-        .ptitle{font-size:24px;font-weight:800;letter-spacing:-.02em}
-        .sitem{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--borderl);font-size:14px}
-        .sitem:last-child{border-bottom:none}
-        .empty{padding:48px 24px;text-align:center;color:var(--muted);font-size:14px}
-        .emico{width:56px;height:56px;border-radius:16px;background:var(--surface2);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+        .qi{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .chip{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--acl);color:var(--ac)}
+        .rr{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--bdl)}
+        .rr:last-child{border-bottom:none}
+        .st{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
+        .pt{font-size:24px;font-weight:800;letter-spacing:-.02em}
+        .si{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--bdl);font-size:14px}
+        .si:last-child{border-bottom:none}
+        .em{padding:48px 24px;text-align:center;color:var(--mu);font-size:14px}
+        .ei{width:56px;height:56px;border-radius:16px;background:var(--sf2);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
     </style>
 </head>
 <body>
 <div id="root"></div>
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    const cfg = {
+<script>
+    firebase.initializeApp({
         apiKey:"AIzaSyDQ2qyBeT_iLuCF3UEmQ2S93z8Qlv6uJSI",
         authDomain:"panier-malin-c8c25.firebaseapp.com",
         projectId:"panier-malin-c8c25",
         storageBucket:"panier-malin-c8c25.firebasestorage.app",
         messagingSenderId:"372069346066",
         appId:"1:372069346066:web:2ae414eff4b637ac5b21cb"
-    };
-    const app = initializeApp(cfg);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    window._fb = { auth, db, signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp };
+    });
+    var _auth = firebase.auth();
+    var _db   = firebase.firestore();
 </script>
 <script type="text/babel">
 const { useState, useEffect, useMemo, useRef } = React;
 
 const fmt = n => new Intl.NumberFormat(‘fr-FR’,{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
-const delta = (cur, last) => (!last||last===0||cur===last) ? null : ((cur-last)/last*100).toFixed(1);
+const calcDelta = (cur,last) => (!last||last===0||cur===last)?null:((cur-last)/last*100).toFixed(1);
 const AID = “panier-malin-prod”;
 
-const Ico = ({n, s=20, c=“currentColor”}) => {
-const d = {
+const Ico = ({n,s=20,c=“currentColor”}) => {
+const paths = {
 home:<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
 grid:<><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
 list:<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></>,
@@ -123,21 +109,21 @@ tdn:<path d="m22 17-8.5-8.5-5 5L2 7m14 10h6v-6"/>,
 rec:<><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M16 8H8m8 4H8m5 4H8"/></>,
 tag:<><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>,
 };
-return <svg xmlns="http://www.w3.org/2000/svg" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d[n]}</svg>;
+return <svg xmlns="http://www.w3.org/2000/svg" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths[n]}</svg>;
 };
 
-const Hero = ({monthTotal, now, monthReceipts, monthDelta, cls=””}) => (
-<div className={“hero “+cls}>
+const Hero = ({total, now, count, delta}) => (
+<div className="hero">
 <div style={{fontSize:11,fontWeight:700,letterSpacing:’.08em’,textTransform:‘uppercase’,opacity:.75,marginBottom:6}}>
 {now.toLocaleString(‘fr-FR’,{month:‘long’,year:‘numeric’})}
 </div>
-<div className="heroamt">{fmt(monthTotal)} €</div>
+<div className="ha">{fmt(total)} €</div>
 <div style={{marginTop:14,display:‘flex’,gap:8,flexWrap:‘wrap’}}>
-<span className="pill"><Ico n="rec" s={12} c="white"/> {monthReceipts} ticket{monthReceipts>1?‘s’:’’}</span>
-{monthDelta!==null && (
-<span className="pill">
-<Ico n={parseFloat(monthDelta)>=0?‘tup’:‘tdn’} s={12} c=“white”/>
-{parseFloat(monthDelta)>=0?’+’:’’}{monthDelta}% vs mois dernier
+<span className="pl"><Ico n="rec" s={12} c="white"/> {count} ticket{count>1?‘s’:’’}</span>
+{delta!==null && (
+<span className="pl">
+<Ico n={parseFloat(delta)>=0?‘tup’:‘tdn’} s={12} c=“white”/>
+{parseFloat(delta)>=0?’+’:’’}{delta}% vs mois dernier
 </span>
 )}
 </div>
@@ -145,165 +131,136 @@ const Hero = ({monthTotal, now, monthReceipts, monthDelta, cls=””}) => (
 );
 
 const App = () => {
-const [user,setUser]         = useState(null);
-const [view,setView]         = useState(‘accueil’);
-const [products,setProducts] = useState([]);
-const [receipts,setReceipts] = useState([]);
-const [loading,setLoading]   = useState(true);
-const [scanning,setScanning] = useState(false);
-const [scanResult,setScan]   = useState(null);
-const [preview,setPreview]   = useState(null);
-const [newItem,setNew]       = useState({name:’’,price:’’});
-const [search,setSearch]     = useState(’’);
+const [user,setUser]       = useState(null);
+const [view,setView]       = useState(‘accueil’);
+const [products,setProds]  = useState([]);
+const [receipts,setRecs]   = useState([]);
+const [loading,setLoading] = useState(true);
+const [scanning,setScan]   = useState(false);
+const [result,setResult]   = useState(null);
+const [preview,setPrev]    = useState(null);
+const [newItem,setNew]     = useState({name:’’,price:’’});
+const [search,setSearch]   = useState(’’);
 const fileRef = useRef();
 
 ```
 useEffect(()=>{
-    if(!window._fb) return;
-    const {auth,onAuthStateChanged,signInAnonymously} = window._fb;
-    signInAnonymously(auth).catch(console.error);
-    return onAuthStateChanged(auth, u=>{ setUser(u); if(!u) setLoading(false); });
+    _auth.signInAnonymously().catch(console.error);
+    return _auth.onAuthStateChanged(u=>{ setUser(u); if(!u) setLoading(false); });
 },[]);
 
 useEffect(()=>{
-    if(!user||!window._fb) return;
-    const {db,collection,onSnapshot} = window._fb;
-    const base = "artifacts/"+AID+"/users/"+user.uid;
-    const u1 = onSnapshot(collection(db,base,'products'), snap=>{
-        setProducts(snap.docs.map(d=>({id:d.id,...d.data()})));
+    if(!user) return;
+    const base = _db.collection('artifacts').doc(AID).collection('users').doc(user.uid);
+    const u1 = base.collection('products').onSnapshot(s=>{
+        setProds(s.docs.map(d=>({id:d.id,...d.data()})));
         setLoading(false);
     }, ()=>setLoading(false));
-    const u2 = onSnapshot(collection(db,base,'receipts'), snap=>{
-        setReceipts(snap.docs.map(d=>({id:d.id,...d.data()})));
+    const u2 = base.collection('receipts').onSnapshot(s=>{
+        setRecs(s.docs.map(d=>({id:d.id,...d.data()})));
     });
     return ()=>{ u1(); u2(); };
 },[user]);
 
-const ref = (...p) => window._fb.doc(window._fb.db,'artifacts',AID,'users',user.uid,...p);
-const upd = (id,f) => window._fb.updateDoc(ref('products',id),f);
-const del = id => window._fb.deleteDoc(ref('products',id));
-const save = p => { const id=p.id||Date.now().toString(); window._fb.setDoc(ref('products',id),{...p,id},{merge:true}); };
-const addRec = data => {
-    const {db,collection,addDoc,serverTimestamp} = window._fb;
-    return addDoc(collection(db,'artifacts',AID,'users',user.uid,'receipts'),{...data,timestamp:serverTimestamp()});
-};
+const base = () => _db.collection('artifacts').doc(AID).collection('users').doc(user.uid);
+const upd  = (id,f) => base().collection('products').doc(id).update(f);
+const del  = id => base().collection('products').doc(id).delete();
+const save = p => { const id=p.id||Date.now().toString(); base().collection('products').doc(id).set({...p,id},{merge:true}); };
+const addRec = d => base().collection('receipts').add({...d,timestamp:firebase.firestore.FieldValue.serverTimestamp()});
 
 const resize = file => new Promise(resolve=>{
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = e => {
-        const img = new Image();
-        img.src = e.target.result;
+    const r = new FileReader(); r.readAsDataURL(file);
+    r.onload = e => {
+        const img = new Image(); img.src = e.target.result;
         img.onload = () => {
-            const canvas = document.createElement('canvas');
+            const c = document.createElement('canvas');
             const sc = Math.min(1200/img.width,1);
-            canvas.width=img.width*sc; canvas.height=img.height*sc;
-            canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-            resolve(canvas.toDataURL('image/jpeg',.85));
+            c.width=img.width*sc; c.height=img.height*sc;
+            c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+            resolve(c.toDataURL('image/jpeg',.85));
         };
     };
 });
 
 const onFile = async e => {
-    const file = e.target.files[0];
-    if(!file) return;
-    setScanning(true); setPreview(URL.createObjectURL(file)); setScan(null);
+    const file = e.target.files[0]; if(!file) return;
+    setScan(true); setPrev(URL.createObjectURL(file)); setResult(null);
     try {
         const b64 = await resize(file);
-        const prompt = `Tu es un assistant qui analyse des tickets de caisse français.
-```
+        const prompt = `Tu analyses un ticket de caisse français. Extrais UNIQUEMENT les produits achetés. IGNORE remises, totaux, TVA, garanties, lignes négatives. Nettoie les noms (max 4 mots, sans codes). Prix unitaire positif uniquement. JSON: { "items": [ { "name": "...", "price": 0.00 } ] }`;
+        const res = await fetch('/api/gemini',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+                contents:[{parts:[{text:prompt},{inlineData:{mimeType:"image/jpeg",data:b64.split(',')[1]}}]}],
+                generationConfig:{responseMimeType:"application/json",responseSchema:{type:"OBJECT",properties:{items:{type:"ARRAY",items:{type:"OBJECT",properties:{name:{type:"STRING"},price:{type:"NUMBER"}},required:["name","price"]}}},required:["items"]}}
+            })
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error?.message||'Erreur API');
+        const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+        setResult(parsed.items.filter(i=>i.price>0));
+    } catch(err) { alert("Erreur : "+(err.message||"Photo trop floue.")); }
+    finally { setScan(false); }
+};
 
-REGLES STRICTES :
+const importScan = async () => {
+    const total = result.reduce((s,i)=>s+i.price,0);
+    await addRec({date:new Date().toISOString(),total,itemCount:result.length});
+    for(const s of result){
+        const m = products.find(p=>p.name.toLowerCase().includes(s.name.toLowerCase().slice(0,6))||s.name.toLowerCase().includes(p.name.toLowerCase().slice(0,6)));
+        if(m) upd(m.id,{lastPrice:m.currentPrice,currentPrice:s.price,priceHistory:[...(m.priceHistory||[]),{price:m.currentPrice,date:new Date().toISOString()}]});
+        else save({name:s.name,currentPrice:s.price,lastPrice:s.price,isNeeded:false,quantity:1,priceHistory:[]});
+    }
+    setResult(null); setPrev(null); setView('catalogue');
+};
 
-- Extrais UNIQUEMENT les vrais produits achetés
-- IGNORE : remises, réductions, garanties, totaux, TVA, lignes de fidélité
-- Si un article apparaît plusieurs fois, ne l’inclus QU’UNE SEULE FOIS avec le prix unitaire
-- Nettoie les noms : supprime codes articles, abréviations. Max 4 mots.
-- Prix unitaire réel, jamais négatif
-  Retourne UNIQUEMENT un JSON : { “items”: [ { “name”: “…”, “price”: 0.00 } ] }`;
-  const res = await fetch(’/api/gemini’,{
-  method:‘POST’,
-  headers:{‘Content-Type’:‘application/json’},
-  body:JSON.stringify({
-  contents:[{parts:[{text:prompt},{inlineData:{mimeType:“image/jpeg”,data:b64.split(’,’)[1]}}]}],
-  generationConfig:{
-  responseMimeType:“application/json”,
-  responseSchema:{type:“OBJECT”,properties:{items:{type:“ARRAY”,items:{type:“OBJECT”,properties:{name:{type:“STRING”},price:{type:“NUMBER”}},required:[“name”,“price”]}}},required:[“items”]}
-  }
-  })
-  });
-  const data = await res.json();
-  if(!res.ok) throw new Error(data.error?.message||‘Erreur API’);
-  const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
-  setScan(parsed.items.filter(i=>i.price>0));
-  } catch(err) {
-  console.error(err);
-  alert(“Erreur : “+(err.message||“Photo trop floue.”));
-  } finally { setScanning(false); }
-  };
-  
-  const importScan = async () => {
-  const total = scanResult.reduce((s,i)=>s+i.price,0);
-  await addRec({date:new Date().toISOString(),total,itemCount:scanResult.length});
-  for(const s of scanResult){
-  const match = products.find(p=>
-  p.name.toLowerCase().includes(s.name.toLowerCase().slice(0,6))||
-  s.name.toLowerCase().includes(p.name.toLowerCase().slice(0,6))
-  );
-  if(match) upd(match.id,{lastPrice:match.currentPrice,currentPrice:s.price,priceHistory:[…(match.priceHistory||[]),{price:match.currentPrice,date:new Date().toISOString()}]});
-  else save({name:s.name,currentPrice:s.price,lastPrice:s.price,isNeeded:false,quantity:1,priceHistory:[]});
-  }
-  setScan(null); setPreview(null); setView(‘catalogue’);
-  };
-  
-  const now = new Date();
-  const shopList  = useMemo(()=>products.filter(p=>p.isNeeded),[products]);
-  const shopTotal = useMemo(()=>shopList.reduce((s,p)=>s+p.currentPrice*(p.quantity||1),0),[shopList]);
-  const mTotal    = useMemo(()=>receipts.filter(r=>{const d=new Date(r.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,r)=>s+(r.total||0),0),[receipts]);
-  const pmTotal   = useMemo(()=>{const pm=new Date(now.getFullYear(),now.getMonth()-1,1);return receipts.filter(r=>{const d=new Date(r.date);return d.getMonth()===pm.getMonth()&&d.getFullYear()===pm.getFullYear();}).reduce((s,r)=>s+(r.total||0),0);},[receipts]);
-  const mDelta    = pmTotal>0?((mTotal-pmTotal)/pmTotal*100).toFixed(0):null;
-  const mCount    = useMemo(()=>receipts.filter(r=>{const d=new Date(r.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length,[receipts]);
-  const filtered  = useMemo(()=>products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>a.name.localeCompare(b.name)),[products,search]);
-  const changed   = useMemo(()=>products.filter(p=>p.lastPrice&&p.lastPrice!==p.currentPrice).sort((a,b)=>Math.abs(parseFloat(delta(b.currentPrice,b.lastPrice)||0))-Math.abs(parseFloat(delta(a.currentPrice,a.lastPrice)||0))),[products]);
-  
-  if(loading) return (
-  <div style={{height:‘100vh’,display:‘flex’,flexDirection:‘column’,alignItems:‘center’,justifyContent:‘center’,gap:12}}>
-  <div style={{width:32,height:32,border:‘2px solid #e4e4e8’,borderTopColor:’#3b6ef5’,borderRadius:‘50%’,animation:‘spin .7s linear infinite’}}></div>
-  <span style={{color:’#8e8e9a’,fontSize:13,fontWeight:500}}>Chargement…</span>
-  </div>
-  );
-  
-  const heroProps = {monthTotal:mTotal,now,monthReceipts:mCount,monthDelta:mDelta};
-  
-  return (
-  <div style={{paddingBottom:76,minHeight:‘100vh’}}>
-  
-  ```
+const now = new Date();
+const shopList  = useMemo(()=>products.filter(p=>p.isNeeded),[products]);
+const shopTotal = useMemo(()=>shopList.reduce((s,p)=>s+p.currentPrice*(p.quantity||1),0),[shopList]);
+const mTotal    = useMemo(()=>receipts.filter(r=>{const d=new Date(r.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,r)=>s+(r.total||0),0),[receipts]);
+const pmTotal   = useMemo(()=>{const pm=new Date(now.getFullYear(),now.getMonth()-1,1);return receipts.filter(r=>{const d=new Date(r.date);return d.getMonth()===pm.getMonth()&&d.getFullYear()===pm.getFullYear();}).reduce((s,r)=>s+(r.total||0),0);},[receipts]);
+const mDelta    = pmTotal>0?((mTotal-pmTotal)/pmTotal*100).toFixed(0):null;
+const mCount    = useMemo(()=>receipts.filter(r=>{const d=new Date(r.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length,[receipts]);
+const filtered  = useMemo(()=>products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>a.name.localeCompare(b.name)),[products,search]);
+const changed   = useMemo(()=>products.filter(p=>p.lastPrice&&p.lastPrice!==p.currentPrice).sort((a,b)=>Math.abs(parseFloat(calcDelta(b.currentPrice,b.lastPrice)||0))-Math.abs(parseFloat(calcDelta(a.currentPrice,a.lastPrice)||0))),[products]);
+
+if(loading) return (
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
+        <div style={{width:32,height:32,border:'2px solid #e4e4e8',borderTopColor:'#3b6ef5',borderRadius:'50%',animation:'sp .7s linear infinite'}}></div>
+        <span style={{color:'#8e8e9a',fontSize:13,fontWeight:500}}>Chargement…</span>
+    </div>
+);
+
+const heroProps = {total:mTotal,now,count:mCount,delta:mDelta};
+
+return (
+    <div style={{paddingBottom:76,minHeight:'100vh'}}>
+
         {view==='accueil' && (
             <div style={{padding:'20px 16px',display:'flex',flexDirection:'column',gap:14}}>
-                <div className="fu"><Hero {...heroProps} /></div>
+                <div className="fu"><Hero {...heroProps}/></div>
                 <div className="fu1" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                     <button className="qa" onClick={()=>setView('scanner')}>
-                        <div className="qaico" style={{background:'#eef1fe'}}><Ico n="cam" s={22} c="var(--accent)"/></div>
-                        <div><div style={{fontWeight:700,fontSize:14}}>Scanner</div><div style={{fontSize:12,color:'var(--muted)',marginTop:1}}>Ticket de caisse</div></div>
+                        <div className="qi" style={{background:'#eef1fe'}}><Ico n="cam" s={22} c="var(--ac)"/></div>
+                        <div><div style={{fontWeight:700,fontSize:14}}>Scanner</div><div style={{fontSize:12,color:'var(--mu)',marginTop:1}}>Ticket de caisse</div></div>
                     </button>
                     <button className="qa" onClick={()=>setView('liste')}>
-                        <div className="qaico" style={{background:'#edfaf4'}}><Ico n="list" s={22} c="var(--down)"/></div>
-                        <div><div style={{fontWeight:700,fontSize:14}}>Ma liste</div><div style={{fontSize:12,color:'var(--muted)',marginTop:1}}>{shopList.length>0?shopList.length+' articles':'Vide'}</div></div>
+                        <div className="qi" style={{background:'#edfaf4'}}><Ico n="list" s={22} c="var(--dn)"/></div>
+                        <div><div style={{fontWeight:700,fontSize:14}}>Ma liste</div><div style={{fontSize:12,color:'var(--mu)',marginTop:1}}>{shopList.length>0?shopList.length+' articles':'Vide'}</div></div>
                     </button>
                 </div>
                 {changed.length>0 && (
                     <div className="fu2">
-                        <div className="stitle">Variations récentes</div>
+                        <div className="st">Variations récentes</div>
                         <div className="card" style={{overflow:'hidden'}}>
                             {changed.slice(0,5).map(p=>{
-                                const d=delta(p.currentPrice,p.lastPrice);
+                                const d=calcDelta(p.currentPrice,p.lastPrice);
                                 const up=parseFloat(d)>0;
                                 return (
-                                    <div className="rrow" key={p.id}>
+                                    <div className="rr" key={p.id}>
                                         <span style={{fontSize:14,fontWeight:500,flex:1}}>{p.name}</span>
-                                        <span style={{fontFamily:'DM Mono',fontSize:12,color:'var(--muted)',marginRight:8}}>{fmt(p.currentPrice)} €</span>
-                                        <span className={"vbadge "+(up?'vup':'vdown')}>{up?'+':''}{d}%</span>
+                                        <span style={{fontFamily:'DM Mono',fontSize:12,color:'var(--mu)',marginRight:8}}>{fmt(p.currentPrice)} €</span>
+                                        <span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>
                                     </div>
                                 );
                             })}
@@ -312,15 +269,15 @@ REGLES STRICTES :
                 )}
                 {receipts.length>0 && (
                     <div className="fu3">
-                        <div className="stitle">Derniers tickets</div>
+                        <div className="st">Derniers tickets</div>
                         <div className="card" style={{overflow:'hidden'}}>
                             {[...receipts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,4).map(r=>(
-                                <div className="rrow" key={r.id}>
+                                <div className="rr" key={r.id}>
                                     <div>
                                         <div style={{fontWeight:600,fontSize:14}}>{new Date(r.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}</div>
-                                        <div style={{fontSize:12,color:'var(--muted)',marginTop:1}}>{r.itemCount} articles</div>
+                                        <div style={{fontSize:12,color:'var(--mu)',marginTop:1}}>{r.itemCount} articles</div>
                                     </div>
-                                    <span style={{fontFamily:'DM Mono',fontSize:14,fontWeight:500,color:'var(--text2)'}}>{fmt(r.total)} €</span>
+                                    <span style={{fontFamily:'DM Mono',fontSize:14,fontWeight:500,color:'var(--tx2)'}}>{fmt(r.total)} €</span>
                                 </div>
                             ))}
                         </div>
@@ -328,62 +285,57 @@ REGLES STRICTES :
                 )}
             </div>
         )}
-  
+
         {view==='catalogue' && (
             <div className="fu" style={{padding:'20px 16px',display:'flex',flexDirection:'column',gap:12}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                    <span className="ptitle">Catalogue</span>
+                    <span className="pt">Catalogue</span>
                     <span className="chip">{products.length} produits</span>
                 </div>
                 <div className="card" style={{padding:14,display:'flex',flexDirection:'column',gap:10}}>
-                    <input className="inp" placeholder="Nom du produit" value={newItem.name}
-                        onChange={e=>setNew({...newItem,name:e.target.value})}
-                        onKeyDown={e=>{if(e.key==='Enter'&&newItem.name&&newItem.price){save({name:newItem.name,currentPrice:parseFloat(newItem.price),lastPrice:parseFloat(newItem.price),isNeeded:false,quantity:1,priceHistory:[]});setNew({name:'',price:''});}}}
-                    />
+                    <input className="inp" placeholder="Nom du produit" value={newItem.name} onChange={e=>setNew({...newItem,name:e.target.value})}
+                        onKeyDown={e=>{if(e.key==='Enter'&&newItem.name&&newItem.price){save({name:newItem.name,currentPrice:parseFloat(newItem.price),lastPrice:parseFloat(newItem.price),isNeeded:false,quantity:1,priceHistory:[]});setNew({name:'',price:''});}}}/>
                     <div style={{display:'flex',gap:8}}>
                         <input className="inp" type="number" step="0.01" placeholder="Prix €" value={newItem.price} onChange={e=>setNew({...newItem,price:e.target.value})} style={{flex:1}}/>
-                        <button className="btnp" onClick={()=>{if(!newItem.name||!newItem.price)return;save({name:newItem.name,currentPrice:parseFloat(newItem.price),lastPrice:parseFloat(newItem.price),isNeeded:false,quantity:1,priceHistory:[]});setNew({name:'',price:''});}}>Ajouter</button>
+                        <button className="bp" onClick={()=>{if(!newItem.name||!newItem.price)return;save({name:newItem.name,currentPrice:parseFloat(newItem.price),lastPrice:parseFloat(newItem.price),isNeeded:false,quantity:1,priceHistory:[]});setNew({name:'',price:''});}}>Ajouter</button>
                     </div>
                 </div>
                 {products.length>4 && <input className="inp" placeholder="Rechercher…" value={search} onChange={e=>setSearch(e.target.value)}/>}
                 <div className="card" style={{overflow:'hidden'}}>
-                    {filtered.length===0 && <div className="empty"><div className="emico"><Ico n="tag" s={24} c="var(--border)"/></div>Aucun produit</div>}
+                    {filtered.length===0 && <div className="em"><div className="ei"><Ico n="tag" s={24} c="var(--bd)"/></div>Aucun produit</div>}
                     {filtered.map(p=>{
-                        const d=delta(p.currentPrice,p.lastPrice);
+                        const d=calcDelta(p.currentPrice,p.lastPrice);
                         const up=d&&parseFloat(d)>0;
                         return (
                             <div className="row" key={p.id}>
                                 <button className={"chk "+(p.isNeeded?'on':'')} onClick={()=>upd(p.id,{isNeeded:!p.isNeeded})}>
                                     {p.isNeeded && <Ico n="chk" s={13} c="white"/>}
                                 </button>
-                                <span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--text)':'var(--text2)'}}>{p.name}</span>
-                                {d && <span className={"vbadge "+(up?'vup':'vdown')}>{up?'+':''}{d}%</span>}
-                                <input type="number" step="0.01" className="pinp"
-                                    defaultValue={p.currentPrice?.toFixed(2)}
-                                    key={p.id+'-'+p.currentPrice}
-                                    onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...(p.priceHistory||[]),{price:p.currentPrice,date:new Date().toISOString()}]});}}
-                                />
-                                <button className="delbtn" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button>
+                                <span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--tx)':'var(--tx2)'}}>{p.name}</span>
+                                {d && <span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}
+                                <input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice}
+                                    onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...(p.priceHistory||[]),{price:p.currentPrice,date:new Date().toISOString()}]});}}/>
+                                <button className="db" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button>
                             </div>
                         );
                     })}
                 </div>
             </div>
         )}
-  
+
         {view==='liste' && (
             <div className="fu" style={{padding:'20px 16px',display:'flex',flexDirection:'column',gap:12}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                    <span className="ptitle">Ma liste</span>
-                    <span style={{fontFamily:'DM Mono',fontSize:13,color:'var(--muted)'}}>{shopList.length} articles</span>
+                    <span className="pt">Ma liste</span>
+                    <span style={{fontFamily:'DM Mono',fontSize:13,color:'var(--mu)'}}>{shopList.length} articles</span>
                 </div>
                 <div className="card" style={{padding:'16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                     <div>
-                        <div style={{fontSize:11,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--muted)',marginBottom:4}}>Estimation</div>
-                        <div style={{fontFamily:'DM Mono',fontSize:28,fontWeight:500,color:'var(--accent)',letterSpacing:'-.02em'}}>{fmt(shopTotal)} €</div>
+                        <div style={{fontSize:11,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mu)',marginBottom:4}}>Estimation</div>
+                        <div style={{fontFamily:'DM Mono',fontSize:28,fontWeight:500,color:'var(--ac)',letterSpacing:'-.02em'}}>{fmt(shopTotal)} €</div>
                     </div>
                     {shopList.length>0 && (
-                        <button className="btnp" style={{fontSize:13,padding:'10px 16px'}} onClick={async()=>{
+                        <button className="bp" style={{fontSize:13,padding:'10px 16px'}} onClick={async()=>{
                             await addRec({date:new Date().toISOString(),total:shopTotal,itemCount:shopList.length});
                             for(const it of shopList) upd(it.id,{isNeeded:false,quantity:1});
                             setView('accueil');
@@ -391,118 +343,118 @@ REGLES STRICTES :
                     )}
                 </div>
                 <div className="card" style={{overflow:'hidden'}}>
-                    {shopList.length===0 && <div className="empty"><div className="emico"><Ico n="list" s={24} c="var(--border)"/></div>Coche des produits dans le catalogue</div>}
+                    {shopList.length===0 && <div className="em"><div className="ei"><Ico n="list" s={24} c="var(--bd)"/></div>Coche des produits dans le catalogue</div>}
                     {shopList.map(it=>(
                         <div className="row" key={it.id}>
                             <div className="qty">
-                                <button className="qbtn" onClick={()=>upd(it.id,{quantity:Math.max(1,(it.quantity||1)-1)})}><Ico n="minus" s={13}/></button>
-                                <span className="qval">{it.quantity||1}</span>
-                                <button className="qbtn" onClick={()=>upd(it.id,{quantity:(it.quantity||1)+1})}><Ico n="plus" s={13}/></button>
+                                <button className="qb" onClick={()=>upd(it.id,{quantity:Math.max(1,(it.quantity||1)-1)})}><Ico n="minus" s={13}/></button>
+                                <span className="qv">{it.quantity||1}</span>
+                                <button className="qb" onClick={()=>upd(it.id,{quantity:(it.quantity||1)+1})}><Ico n="plus" s={13}/></button>
                             </div>
                             <span style={{flex:1,fontSize:14,fontWeight:500,paddingLeft:8}}>{it.name}</span>
-                            <span style={{fontFamily:'DM Mono',fontSize:14,color:'var(--accent)',fontWeight:500}}>{fmt(it.currentPrice*(it.quantity||1))} €</span>
+                            <span style={{fontFamily:'DM Mono',fontSize:14,color:'var(--ac)',fontWeight:500}}>{fmt(it.currentPrice*(it.quantity||1))} €</span>
                         </div>
                     ))}
                 </div>
             </div>
         )}
-  
+
         {view==='scanner' && (
             <div className="fu" style={{padding:'20px 16px',display:'flex',flexDirection:'column',gap:12}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                    <span className="ptitle">Scanner</span>
+                    <span className="pt">Scanner</span>
                     <span className="chip" style={{fontFamily:'DM Mono',fontSize:10}}>Gemini 2.5</span>
                 </div>
                 {preview && (
-                    <div className="scanprev">
+                    <div className="sp2">
                         <img src={preview} alt="ticket"/>
-                        {scanning && <div className="scanov"><div className="loader"></div><span style={{color:'#fff',fontSize:12,fontWeight:600}}>Analyse en cours…</span></div>}
+                        {scanning && <div className="sov"><div className="ld"></div><span style={{color:'#fff',fontSize:12,fontWeight:600}}>Analyse en cours…</span></div>}
                     </div>
                 )}
-                {!scanResult && !scanning && (
-                    <label className="scanzone">
-                        <div style={{width:64,height:64,borderRadius:18,background:'var(--accentl)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                            <Ico n="cam" s={28} c="var(--accent)"/>
+                {!result && !scanning && (
+                    <label className="sz">
+                        <div style={{width:64,height:64,borderRadius:18,background:'var(--acl)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                            <Ico n="cam" s={28} c="var(--ac)"/>
                         </div>
                         <div style={{textAlign:'center'}}>
                             <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>{preview?'Changer de ticket':'Choisir un ticket'}</div>
-                            <div style={{fontSize:13,color:'var(--muted)'}}>Photo ou galerie</div>
+                            <div style={{fontSize:13,color:'var(--mu)'}}>Photo ou galerie</div>
                         </div>
                         <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={onFile}/>
                     </label>
                 )}
-                {scanResult && !scanning && (
+                {result && !scanning && (
                     <div className="card fu" style={{overflow:'hidden'}}>
-                        <div style={{padding:'12px 16px',borderBottom:'1px solid var(--borderl)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                        <div style={{padding:'12px 16px',borderBottom:'1px solid var(--bdl)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                             <div style={{display:'flex',alignItems:'center',gap:8}}>
-                                <Ico n="ok" s={16} c="var(--down)"/>
-                                <span style={{fontWeight:700,fontSize:14}}>{scanResult.length} articles détectés</span>
+                                <Ico n="ok" s={16} c="var(--dn)"/>
+                                <span style={{fontWeight:700,fontSize:14}}>{result.length} articles détectés</span>
                             </div>
-                            <button className="delbtn" onClick={()=>{setScan(null);setPreview(null);}}><Ico n="x" s={16}/></button>
+                            <button className="db" onClick={()=>{setResult(null);setPrev(null);}}><Ico n="x" s={16}/></button>
                         </div>
                         <div style={{maxHeight:300,overflowY:'auto'}}>
-                            {scanResult.map((it,i)=>(
-                                <div className="sitem" key={i}>
-                                    <span style={{fontSize:13,color:'var(--text2)',flex:1,paddingRight:12}}>{it.name}</span>
-                                    <span style={{fontFamily:'DM Mono',fontSize:13,color:'var(--accent)',fontWeight:500}}>{fmt(it.price)} €</span>
+                            {result.map((it,i)=>(
+                                <div className="si" key={i}>
+                                    <span style={{fontSize:13,color:'var(--tx2)',flex:1,paddingRight:12}}>{it.name}</span>
+                                    <span style={{fontFamily:'DM Mono',fontSize:13,color:'var(--ac)',fontWeight:500}}>{fmt(it.price)} €</span>
                                 </div>
                             ))}
                         </div>
-                        <div style={{padding:14,display:'flex',gap:8,borderTop:'1px solid var(--borderl)'}}>
-                            <button className="btns" style={{flex:1}} onClick={()=>{setScan(null);setPreview(null);}}>Annuler</button>
-                            <button className="btnp" style={{flex:2}} onClick={importScan}>Importer dans le catalogue</button>
+                        <div style={{padding:14,display:'flex',gap:8,borderTop:'1px solid var(--bdl)'}}>
+                            <button className="bs" style={{flex:1}} onClick={()=>{setResult(null);setPrev(null);}}>Annuler</button>
+                            <button className="bp" style={{flex:2}} onClick={importScan}>Importer dans le catalogue</button>
                         </div>
                     </div>
                 )}
             </div>
         )}
-  
+
         {view==='budget' && (
             <div className="fu" style={{padding:'20px 16px',display:'flex',flexDirection:'column',gap:12}}>
-                <span className="ptitle">Budget</span>
-                <Hero {...heroProps} />
+                <span className="pt">Budget</span>
+                <Hero {...heroProps}/>
                 {receipts.length>0 && (
                     <>
-                        <div className="stitle" style={{marginBottom:0}}>Historique</div>
+                        <div className="st" style={{marginBottom:0}}>Historique</div>
                         <div className="card" style={{overflow:'hidden'}}>
                             {[...receipts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,15).map(r=>(
-                                <div className="rrow" key={r.id}>
+                                <div className="rr" key={r.id}>
                                     <div>
                                         <div style={{fontWeight:600,fontSize:14}}>{new Date(r.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}</div>
-                                        <div style={{fontSize:12,color:'var(--muted)',marginTop:1}}>{r.itemCount} articles</div>
+                                        <div style={{fontSize:12,color:'var(--mu)',marginTop:1}}>{r.itemCount} articles</div>
                                     </div>
-                                    <span style={{fontFamily:'DM Mono',fontSize:14,fontWeight:500,color:'var(--text2)'}}>{fmt(r.total)} €</span>
+                                    <span style={{fontFamily:'DM Mono',fontSize:14,fontWeight:500,color:'var(--tx2)'}}>{fmt(r.total)} €</span>
                                 </div>
                             ))}
                         </div>
                     </>
                 )}
-                {receipts.length===0 && <div className="card"><div className="empty"><div className="emico"><Ico n="bar" s={24} c="var(--border)"/></div>Aucun ticket enregistré</div></div>}
+                {receipts.length===0 && <div className="card"><div className="em"><div className="ei"><Ico n="bar" s={24} c="var(--bd)"/></div>Aucun ticket enregistré</div></div>}
             </div>
         )}
-  
+
         <nav className="nav">
             {[
-                {id:'accueil', n:'home', l:'Accueil'},
-                {id:'catalogue', n:'grid', l:'Catalogue'},
-                {id:'liste', n:'list', l:'Liste', badge:shopList.length},
-                {id:'scanner', n:'cam', l:'Scanner'},
-                {id:'budget', n:'bar', l:'Budget'},
+                {id:'accueil',n:'home',l:'Accueil'},
+                {id:'catalogue',n:'grid',l:'Catalogue'},
+                {id:'liste',n:'list',l:'Liste',badge:shopList.length},
+                {id:'scanner',n:'cam',l:'Scanner'},
+                {id:'budget',n:'bar',l:'Budget'},
             ].map(t=>(
                 <button key={t.id} className={"nb "+(view===t.id?'on':'')} onClick={()=>setView(t.id)}>
-                    {t.badge>0 && <span className="badge">{t.badge}</span>}
-                    <Ico n={t.n} s={21} c={view===t.id?'var(--accent)':'var(--muted)'}/>
+                    {t.badge>0 && <span className="bdg">{t.badge}</span>}
+                    <Ico n={t.n} s={21} c={view===t.id?'var(--ac)':'var(--mu)'}/>
                     {t.l}
                 </button>
             ))}
         </nav>
     </div>
-  ```
-  
-  );
-  };
+);
+```
 
-ReactDOM.createRoot(document.getElementById(‘root’)).render(<App />);
+};
+
+ReactDOM.createRoot(document.getElementById(‘root’)).render(<App/>);
 </script>
 
 </body>
