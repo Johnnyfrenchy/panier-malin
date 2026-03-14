@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <rect width="180" height="180" rx="40" fill="#3b6ef5"/>
+  <!-- Shopping bag body -->
+  <rect x="42" y="78" width="96" height="74" rx="14" fill="white" opacity="0.95"/>
+  <!-- Handle -->
+  <path d="M68 78 C68 54 112 54 112 78" stroke="white" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <!-- Plus icon inside bag -->
+  <path d="M90 100 L90 124 M78 112 L102 112" stroke="#3b6ef5" stroke-width="8" stroke-linecap="round"/>
+</svg>
