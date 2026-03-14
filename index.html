@@ -8,9 +8,6 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root{--bg:#f5f5f7;--sf:#fff;--sf2:#f0f0f2;--bd:#e4e4e8;--bdl:#efefef;--ac:#3b6ef5;--acl:#eef1fe;--acd:#2554d4;--tx:#111116;--tx2:#3a3a45;--mu:#8e8e9a;--up:#e03a3a;--upb:#fff0f0;--dn:#1a9e6a;--dnb:#edfaf4;--sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
@@ -72,8 +69,11 @@
 </head>
 <body>
 <div id="root"></div>
-<script>
-    firebase.initializeApp({
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    const app = initializeApp({
         apiKey:"AIzaSyDQ2qyBeT_iLuCF3UEmQ2S93z8Qlv6uJSI",
         authDomain:"panier-malin-c8c25.firebaseapp.com",
         projectId:"panier-malin-c8c25",
@@ -81,15 +81,13 @@
         messagingSenderId:"372069346066",
         appId:"1:372069346066:web:2ae414eff4b637ac5b21cb"
     });
-    var _auth = firebase.auth();
-    var _db   = firebase.firestore();
+    window._fb = { auth:getAuth(app), db:getFirestore(app), signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp };
 </script>
-<script type="text/babel">
+<script type="text/babel" data-presets="react">
 const { useState, useEffect, useMemo, useRef } = React;
-
-const fmt = n => new Intl.NumberFormat(‘fr-FR’,{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
+const fmt = n => new Intl.NumberFormat('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const calcDelta = (cur,last) => (!last||last===0||cur===last)?null:((cur-last)/last*100).toFixed(1);
-const AID = “panier-malin-prod”;
+const AID = "panier-malin-prod";
 
 const Ico = ({n,s=20,c=“currentColor”}) => {
 const paths = {
@@ -112,24 +110,6 @@ tag:<><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 
 return <svg xmlns="http://www.w3.org/2000/svg" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths[n]}</svg>;
 };
 
-const Hero = ({total, now, count, delta}) => (
-<div className="hero">
-<div style={{fontSize:11,fontWeight:700,letterSpacing:’.08em’,textTransform:‘uppercase’,opacity:.75,marginBottom:6}}>
-{now.toLocaleString(‘fr-FR’,{month:‘long’,year:‘numeric’})}
-</div>
-<div className="ha">{fmt(total)} €</div>
-<div style={{marginTop:14,display:‘flex’,gap:8,flexWrap:‘wrap’}}>
-<span className="pl"><Ico n="rec" s={12} c="white"/> {count} ticket{count>1?‘s’:’’}</span>
-{delta!==null && (
-<span className="pl">
-<Ico n={parseFloat(delta)>=0?‘tup’:‘tdn’} s={12} c=“white”/>
-{parseFloat(delta)>=0?’+’:’’}{delta}% vs mois dernier
-</span>
-)}
-</div>
-</div>
-);
-
 const App = () => {
 const [user,setUser]       = useState(null);
 const [view,setView]       = useState(‘accueil’);
@@ -145,76 +125,67 @@ const fileRef = useRef();
 
 ```
 useEffect(()=>{
-    _auth.signInAnonymously().catch(console.error);
-    return _auth.onAuthStateChanged(u=>{ setUser(u); if(!u) setLoading(false); });
+    const wait = setInterval(()=>{
+        if(!window._fb) return;
+        clearInterval(wait);
+        const {auth,signInAnonymously,onAuthStateChanged} = window._fb;
+        signInAnonymously(auth).catch(console.error);
+        onAuthStateChanged(auth, u=>{ setUser(u); if(!u) setLoading(false); });
+    }, 100);
 },[]);
 
 useEffect(()=>{
-    if(!user) return;
-    const base = _db.collection('artifacts').doc(AID).collection('users').doc(user.uid);
-    const u1 = base.collection('products').onSnapshot(s=>{
+    if(!user||!window._fb) return;
+    const {db,collection,onSnapshot} = window._fb;
+    const base = 'artifacts/'+AID+'/users/'+user.uid;
+    const u1 = onSnapshot(collection(db,base,'products'), s=>{
         setProds(s.docs.map(d=>({id:d.id,...d.data()})));
         setLoading(false);
     }, ()=>setLoading(false));
-    const u2 = base.collection('receipts').onSnapshot(s=>{
+    const u2 = onSnapshot(collection(db,base,'receipts'), s=>{
         setRecs(s.docs.map(d=>({id:d.id,...d.data()})));
     });
     return ()=>{ u1(); u2(); };
 },[user]);
 
-const base = () => _db.collection('artifacts').doc(AID).collection('users').doc(user.uid);
-const upd  = (id,f) => base().collection('products').doc(id).update(f);
-const del  = id => base().collection('products').doc(id).delete();
-const save = p => { const id=p.id||Date.now().toString(); base().collection('products').doc(id).set({...p,id},{merge:true}); };
-const addRec = d => base().collection('receipts').add({...d,timestamp:firebase.firestore.FieldValue.serverTimestamp()});
+const ref  = (...p) => window._fb.doc(window._fb.db,'artifacts',AID,'users',user.uid,...p);
+const upd  = (id,f) => window._fb.updateDoc(ref('products',id),f);
+const del  = id => window._fb.deleteDoc(ref('products',id));
+const save = p => { const id=p.id||Date.now().toString(); window._fb.setDoc(ref('products',id),{...p,id},{merge:true}); };
+const addRec = d => { const {db,collection,addDoc,serverTimestamp}=window._fb; return addDoc(collection(db,'artifacts',AID,'users',user.uid,'receipts'),{...d,timestamp:serverTimestamp()}); };
 
 const resize = file => new Promise(resolve=>{
-    const r = new FileReader(); r.readAsDataURL(file);
-    r.onload = e => {
-        const img = new Image(); img.src = e.target.result;
-        img.onload = () => {
-            const c = document.createElement('canvas');
-            const sc = Math.min(1200/img.width,1);
-            c.width=img.width*sc; c.height=img.height*sc;
-            c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-            resolve(c.toDataURL('image/jpeg',.85));
-        };
-    };
+    const r=new FileReader(); r.readAsDataURL(file);
+    r.onload=e=>{ const img=new Image(); img.src=e.target.result; img.onload=()=>{ const c=document.createElement('canvas'); const sc=Math.min(1200/img.width,1); c.width=img.width*sc; c.height=img.height*sc; c.getContext('2d').drawImage(img,0,0,c.width,c.height); resolve(c.toDataURL('image/jpeg',.85)); }; };
 });
 
 const onFile = async e => {
-    const file = e.target.files[0]; if(!file) return;
+    const file=e.target.files[0]; if(!file) return;
     setScan(true); setPrev(URL.createObjectURL(file)); setResult(null);
     try {
-        const b64 = await resize(file);
-        const prompt = `Tu analyses un ticket de caisse français. Extrais UNIQUEMENT les produits achetés. IGNORE remises, totaux, TVA, garanties, lignes négatives. Nettoie les noms (max 4 mots, sans codes). Prix unitaire positif uniquement. JSON: { "items": [ { "name": "...", "price": 0.00 } ] }`;
-        const res = await fetch('/api/gemini',{
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-                contents:[{parts:[{text:prompt},{inlineData:{mimeType:"image/jpeg",data:b64.split(',')[1]}}]}],
-                generationConfig:{responseMimeType:"application/json",responseSchema:{type:"OBJECT",properties:{items:{type:"ARRAY",items:{type:"OBJECT",properties:{name:{type:"STRING"},price:{type:"NUMBER"}},required:["name","price"]}}},required:["items"]}}
-            })
-        });
-        const data = await res.json();
+        const b64=await resize(file);
+        const prompt=`Tu analyses un ticket de caisse français. Extrais UNIQUEMENT les produits achetés. IGNORE remises, totaux, TVA, garanties, lignes négatives. Nettoie les noms (max 4 mots, sans codes). Prix unitaire positif uniquement. JSON: { "items": [ { "name": "...", "price": 0.00 } ] }`;
+        const res=await fetch('/api/gemini',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt},{inlineData:{mimeType:"image/jpeg",data:b64.split(',')[1]}}]}],generationConfig:{responseMimeType:"application/json",responseSchema:{type:"OBJECT",properties:{items:{type:"ARRAY",items:{type:"OBJECT",properties:{name:{type:"STRING"},price:{type:"NUMBER"}},required:["name","price"]}}},required:["items"]}}})});
+        const data=await res.json();
         if(!res.ok) throw new Error(data.error?.message||'Erreur API');
-        const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+        const parsed=JSON.parse(data.candidates[0].content.parts[0].text);
         setResult(parsed.items.filter(i=>i.price>0));
-    } catch(err) { alert("Erreur : "+(err.message||"Photo trop floue.")); }
-    finally { setScan(false); }
+    } catch(err){ alert("Erreur : "+(err.message||"Photo trop floue.")); }
+    finally{ setScan(false); }
 };
 
 const importScan = async () => {
-    const total = result.reduce((s,i)=>s+i.price,0);
+    const total=result.reduce((s,i)=>s+i.price,0);
     await addRec({date:new Date().toISOString(),total,itemCount:result.length});
     for(const s of result){
-        const m = products.find(p=>p.name.toLowerCase().includes(s.name.toLowerCase().slice(0,6))||s.name.toLowerCase().includes(p.name.toLowerCase().slice(0,6)));
+        const m=products.find(p=>p.name.toLowerCase().includes(s.name.toLowerCase().slice(0,6))||s.name.toLowerCase().includes(p.name.toLowerCase().slice(0,6)));
         if(m) upd(m.id,{lastPrice:m.currentPrice,currentPrice:s.price,priceHistory:[...(m.priceHistory||[]),{price:m.currentPrice,date:new Date().toISOString()}]});
         else save({name:s.name,currentPrice:s.price,lastPrice:s.price,isNeeded:false,quantity:1,priceHistory:[]});
     }
     setResult(null); setPrev(null); setView('catalogue');
 };
 
-const now = new Date();
+const now=new Date();
 const shopList  = useMemo(()=>products.filter(p=>p.isNeeded),[products]);
 const shopTotal = useMemo(()=>shopList.reduce((s,p)=>s+p.currentPrice*(p.quantity||1),0),[shopList]);
 const mTotal    = useMemo(()=>receipts.filter(r=>{const d=new Date(r.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,r)=>s+(r.total||0),0),[receipts]);
@@ -231,14 +202,19 @@ if(loading) return (
     </div>
 );
 
-const heroProps = {total:mTotal,now,count:mCount,delta:mDelta};
-
 return (
     <div style={{paddingBottom:76,minHeight:'100vh'}}>
 
         {view==='accueil' && (
             <div style={{padding:'20px 16px',display:'flex',flexDirection:'column',gap:14}}>
-                <div className="fu"><Hero {...heroProps}/></div>
+                <div className="hero fu">
+                    <div style={{fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.75,marginBottom:6}}>{now.toLocaleString('fr-FR',{month:'long',year:'numeric'})}</div>
+                    <div className="ha">{fmt(mTotal)} €</div>
+                    <div style={{marginTop:14,display:'flex',gap:8,flexWrap:'wrap'}}>
+                        <span className="pl"><Ico n="rec" s={12} c="white"/> {mCount} ticket{mCount>1?'s':''}</span>
+                        {mDelta!==null && <span className="pl"><Ico n={parseFloat(mDelta)>=0?'tup':'tdn'} s={12} c="white"/>{parseFloat(mDelta)>=0?'+':''}{mDelta}% vs mois dernier</span>}
+                    </div>
+                </div>
                 <div className="fu1" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                     <button className="qa" onClick={()=>setView('scanner')}>
                         <div className="qi" style={{background:'#eef1fe'}}><Ico n="cam" s={22} c="var(--ac)"/></div>
@@ -253,17 +229,13 @@ return (
                     <div className="fu2">
                         <div className="st">Variations récentes</div>
                         <div className="card" style={{overflow:'hidden'}}>
-                            {changed.slice(0,5).map(p=>{
-                                const d=calcDelta(p.currentPrice,p.lastPrice);
-                                const up=parseFloat(d)>0;
-                                return (
-                                    <div className="rr" key={p.id}>
-                                        <span style={{fontSize:14,fontWeight:500,flex:1}}>{p.name}</span>
-                                        <span style={{fontFamily:'DM Mono',fontSize:12,color:'var(--mu)',marginRight:8}}>{fmt(p.currentPrice)} €</span>
-                                        <span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>
-                                    </div>
-                                );
-                            })}
+                            {changed.slice(0,5).map(p=>{const d=calcDelta(p.currentPrice,p.lastPrice);const up=parseFloat(d)>0;return(
+                                <div className="rr" key={p.id}>
+                                    <span style={{fontSize:14,fontWeight:500,flex:1}}>{p.name}</span>
+                                    <span style={{fontFamily:'DM Mono',fontSize:12,color:'var(--mu)',marginRight:8}}>{fmt(p.currentPrice)} €</span>
+                                    <span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>
+                                </div>
+                            );})}
                         </div>
                     </div>
                 )}
@@ -273,10 +245,7 @@ return (
                         <div className="card" style={{overflow:'hidden'}}>
                             {[...receipts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,4).map(r=>(
                                 <div className="rr" key={r.id}>
-                                    <div>
-                                        <div style={{fontWeight:600,fontSize:14}}>{new Date(r.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}</div>
-                                        <div style={{fontSize:12,color:'var(--mu)',marginTop:1}}>{r.itemCount} articles</div>
-                                    </div>
+                                    <div><div style={{fontWeight:600,fontSize:14}}>{new Date(r.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}</div><div style={{fontSize:12,color:'var(--mu)',marginTop:1}}>{r.itemCount} articles</div></div>
                                     <span style={{fontFamily:'DM Mono',fontSize:14,fontWeight:500,color:'var(--tx2)'}}>{fmt(r.total)} €</span>
                                 </div>
                             ))}
@@ -293,8 +262,7 @@ return (
                     <span className="chip">{products.length} produits</span>
                 </div>
                 <div className="card" style={{padding:14,display:'flex',flexDirection:'column',gap:10}}>
-                    <input className="inp" placeholder="Nom du produit" value={newItem.name} onChange={e=>setNew({...newItem,name:e.target.value})}
-                        onKeyDown={e=>{if(e.key==='Enter'&&newItem.name&&newItem.price){save({name:newItem.name,currentPrice:parseFloat(newItem.price),lastPrice:parseFloat(newItem.price),isNeeded:false,quantity:1,priceHistory:[]});setNew({name:'',price:''});}}}/>
+                    <input className="inp" placeholder="Nom du produit" value={newItem.name} onChange={e=>setNew({...newItem,name:e.target.value})} onKeyDown={e=>{if(e.key==='Enter'&&newItem.name&&newItem.price){save({name:newItem.name,currentPrice:parseFloat(newItem.price),lastPrice:parseFloat(newItem.price),isNeeded:false,quantity:1,priceHistory:[]});setNew({name:'',price:''});}}}/>
                     <div style={{display:'flex',gap:8}}>
                         <input className="inp" type="number" step="0.01" placeholder="Prix €" value={newItem.price} onChange={e=>setNew({...newItem,price:e.target.value})} style={{flex:1}}/>
                         <button className="bp" onClick={()=>{if(!newItem.name||!newItem.price)return;save({name:newItem.name,currentPrice:parseFloat(newItem.price),lastPrice:parseFloat(newItem.price),isNeeded:false,quantity:1,priceHistory:[]});setNew({name:'',price:''});}}>Ajouter</button>
@@ -303,22 +271,15 @@ return (
                 {products.length>4 && <input className="inp" placeholder="Rechercher…" value={search} onChange={e=>setSearch(e.target.value)}/>}
                 <div className="card" style={{overflow:'hidden'}}>
                     {filtered.length===0 && <div className="em"><div className="ei"><Ico n="tag" s={24} c="var(--bd)"/></div>Aucun produit</div>}
-                    {filtered.map(p=>{
-                        const d=calcDelta(p.currentPrice,p.lastPrice);
-                        const up=d&&parseFloat(d)>0;
-                        return (
-                            <div className="row" key={p.id}>
-                                <button className={"chk "+(p.isNeeded?'on':'')} onClick={()=>upd(p.id,{isNeeded:!p.isNeeded})}>
-                                    {p.isNeeded && <Ico n="chk" s={13} c="white"/>}
-                                </button>
-                                <span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--tx)':'var(--tx2)'}}>{p.name}</span>
-                                {d && <span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}
-                                <input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice}
-                                    onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...(p.priceHistory||[]),{price:p.currentPrice,date:new Date().toISOString()}]});}}/>
-                                <button className="db" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button>
-                            </div>
-                        );
-                    })}
+                    {filtered.map(p=>{const d=calcDelta(p.currentPrice,p.lastPrice);const up=d&&parseFloat(d)>0;return(
+                        <div className="row" key={p.id}>
+                            <button className={"chk "+(p.isNeeded?'on':'')} onClick={()=>upd(p.id,{isNeeded:!p.isNeeded})}>{p.isNeeded&&<Ico n="chk" s={13} c="white"/>}</button>
+                            <span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--tx)':'var(--tx2)'}}>{p.name}</span>
+                            {d&&<span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}
+                            <input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...(p.priceHistory||[]),{price:p.currentPrice,date:new Date().toISOString()}]});}}/>
+                            <button className="db" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button>
+                        </div>
+                    );})}
                 </div>
             </div>
         )}
@@ -334,16 +295,10 @@ return (
                         <div style={{fontSize:11,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mu)',marginBottom:4}}>Estimation</div>
                         <div style={{fontFamily:'DM Mono',fontSize:28,fontWeight:500,color:'var(--ac)',letterSpacing:'-.02em'}}>{fmt(shopTotal)} €</div>
                     </div>
-                    {shopList.length>0 && (
-                        <button className="bp" style={{fontSize:13,padding:'10px 16px'}} onClick={async()=>{
-                            await addRec({date:new Date().toISOString(),total:shopTotal,itemCount:shopList.length});
-                            for(const it of shopList) upd(it.id,{isNeeded:false,quantity:1});
-                            setView('accueil');
-                        }}>Terminer</button>
-                    )}
+                    {shopList.length>0&&<button className="bp" style={{fontSize:13,padding:'10px 16px'}} onClick={async()=>{await addRec({date:new Date().toISOString(),total:shopTotal,itemCount:shopList.length});for(const it of shopList)upd(it.id,{isNeeded:false,quantity:1});setView('accueil');}}>Terminer</button>}
                 </div>
                 <div className="card" style={{overflow:'hidden'}}>
-                    {shopList.length===0 && <div className="em"><div className="ei"><Ico n="list" s={24} c="var(--bd)"/></div>Coche des produits dans le catalogue</div>}
+                    {shopList.length===0&&<div className="em"><div className="ei"><Ico n="list" s={24} c="var(--bd)"/></div>Coche des produits dans le catalogue</div>}
                     {shopList.map(it=>(
                         <div className="row" key={it.id}>
                             <div className="qty">
@@ -365,40 +320,22 @@ return (
                     <span className="pt">Scanner</span>
                     <span className="chip" style={{fontFamily:'DM Mono',fontSize:10}}>Gemini 2.5</span>
                 </div>
-                {preview && (
-                    <div className="sp2">
-                        <img src={preview} alt="ticket"/>
-                        {scanning && <div className="sov"><div className="ld"></div><span style={{color:'#fff',fontSize:12,fontWeight:600}}>Analyse en cours…</span></div>}
-                    </div>
-                )}
-                {!result && !scanning && (
+                {preview&&<div className="sp2"><img src={preview} alt="ticket"/>{scanning&&<div className="sov"><div className="ld"></div><span style={{color:'#fff',fontSize:12,fontWeight:600}}>Analyse en cours…</span></div>}</div>}
+                {!result&&!scanning&&(
                     <label className="sz">
-                        <div style={{width:64,height:64,borderRadius:18,background:'var(--acl)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                            <Ico n="cam" s={28} c="var(--ac)"/>
-                        </div>
-                        <div style={{textAlign:'center'}}>
-                            <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>{preview?'Changer de ticket':'Choisir un ticket'}</div>
-                            <div style={{fontSize:13,color:'var(--mu)'}}>Photo ou galerie</div>
-                        </div>
+                        <div style={{width:64,height:64,borderRadius:18,background:'var(--acl)',display:'flex',alignItems:'center',justifyContent:'center'}}><Ico n="cam" s={28} c="var(--ac)"/></div>
+                        <div style={{textAlign:'center'}}><div style={{fontWeight:700,fontSize:15,marginBottom:3}}>{preview?'Changer de ticket':'Choisir un ticket'}</div><div style={{fontSize:13,color:'var(--mu)'}}>Photo ou galerie</div></div>
                         <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={onFile}/>
                     </label>
                 )}
-                {result && !scanning && (
+                {result&&!scanning&&(
                     <div className="card fu" style={{overflow:'hidden'}}>
                         <div style={{padding:'12px 16px',borderBottom:'1px solid var(--bdl)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                            <div style={{display:'flex',alignItems:'center',gap:8}}>
-                                <Ico n="ok" s={16} c="var(--dn)"/>
-                                <span style={{fontWeight:700,fontSize:14}}>{result.length} articles détectés</span>
-                            </div>
+                            <div style={{display:'flex',alignItems:'center',gap:8}}><Ico n="ok" s={16} c="var(--dn)"/><span style={{fontWeight:700,fontSize:14}}>{result.length} articles détectés</span></div>
                             <button className="db" onClick={()=>{setResult(null);setPrev(null);}}><Ico n="x" s={16}/></button>
                         </div>
                         <div style={{maxHeight:300,overflowY:'auto'}}>
-                            {result.map((it,i)=>(
-                                <div className="si" key={i}>
-                                    <span style={{fontSize:13,color:'var(--tx2)',flex:1,paddingRight:12}}>{it.name}</span>
-                                    <span style={{fontFamily:'DM Mono',fontSize:13,color:'var(--ac)',fontWeight:500}}>{fmt(it.price)} €</span>
-                                </div>
-                            ))}
+                            {result.map((it,i)=><div className="si" key={i}><span style={{fontSize:13,color:'var(--tx2)',flex:1,paddingRight:12}}>{it.name}</span><span style={{fontFamily:'DM Mono',fontSize:13,color:'var(--ac)',fontWeight:500}}>{fmt(it.price)} €</span></div>)}
                         </div>
                         <div style={{padding:14,display:'flex',gap:8,borderTop:'1px solid var(--bdl)'}}>
                             <button className="bs" style={{flex:1}} onClick={()=>{setResult(null);setPrev(null);}}>Annuler</button>
@@ -412,37 +349,35 @@ return (
         {view==='budget' && (
             <div className="fu" style={{padding:'20px 16px',display:'flex',flexDirection:'column',gap:12}}>
                 <span className="pt">Budget</span>
-                <Hero {...heroProps}/>
-                {receipts.length>0 && (
+                <div className="hero">
+                    <div style={{fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.75,marginBottom:6}}>{now.toLocaleString('fr-FR',{month:'long',year:'numeric'})}</div>
+                    <div className="ha">{fmt(mTotal)} €</div>
+                    <div style={{marginTop:14,display:'flex',gap:8,flexWrap:'wrap'}}>
+                        <span className="pl"><Ico n="rec" s={12} c="white"/> {mCount} ticket{mCount>1?'s':''}</span>
+                        {mDelta!==null&&<span className="pl"><Ico n={parseFloat(mDelta)>=0?'tup':'tdn'} s={12} c="white"/>{parseFloat(mDelta)>=0?'+':''}{mDelta}% vs mois dernier</span>}
+                    </div>
+                </div>
+                {receipts.length>0&&(
                     <>
                         <div className="st" style={{marginBottom:0}}>Historique</div>
                         <div className="card" style={{overflow:'hidden'}}>
                             {[...receipts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,15).map(r=>(
                                 <div className="rr" key={r.id}>
-                                    <div>
-                                        <div style={{fontWeight:600,fontSize:14}}>{new Date(r.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}</div>
-                                        <div style={{fontSize:12,color:'var(--mu)',marginTop:1}}>{r.itemCount} articles</div>
-                                    </div>
+                                    <div><div style={{fontWeight:600,fontSize:14}}>{new Date(r.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}</div><div style={{fontSize:12,color:'var(--mu)',marginTop:1}}>{r.itemCount} articles</div></div>
                                     <span style={{fontFamily:'DM Mono',fontSize:14,fontWeight:500,color:'var(--tx2)'}}>{fmt(r.total)} €</span>
                                 </div>
                             ))}
                         </div>
                     </>
                 )}
-                {receipts.length===0 && <div className="card"><div className="em"><div className="ei"><Ico n="bar" s={24} c="var(--bd)"/></div>Aucun ticket enregistré</div></div>}
+                {receipts.length===0&&<div className="card"><div className="em"><div className="ei"><Ico n="bar" s={24} c="var(--bd)"/></div>Aucun ticket enregistré</div></div>}
             </div>
         )}
 
         <nav className="nav">
-            {[
-                {id:'accueil',n:'home',l:'Accueil'},
-                {id:'catalogue',n:'grid',l:'Catalogue'},
-                {id:'liste',n:'list',l:'Liste',badge:shopList.length},
-                {id:'scanner',n:'cam',l:'Scanner'},
-                {id:'budget',n:'bar',l:'Budget'},
-            ].map(t=>(
+            {[{id:'accueil',n:'home',l:'Accueil'},{id:'catalogue',n:'grid',l:'Catalogue'},{id:'liste',n:'list',l:'Liste',badge:shopList.length},{id:'scanner',n:'cam',l:'Scanner'},{id:'budget',n:'bar',l:'Budget'}].map(t=>(
                 <button key={t.id} className={"nb "+(view===t.id?'on':'')} onClick={()=>setView(t.id)}>
-                    {t.badge>0 && <span className="bdg">{t.badge}</span>}
+                    {t.badge>0&&<span className="bdg">{t.badge}</span>}
                     <Ico n={t.n} s={21} c={view===t.id?'var(--ac)':'var(--mu)'}/>
                     {t.l}
                 </button>
