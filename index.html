@@ -1,1 +1,281 @@
-Existing content from index.html will be here
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Panier Malin - Gestion des Courses</title>
+    <!-- Tailwind CSS pour le style -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Moteur React et Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Style pour masquer les flèches des inputs number sur iPhone */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
+
+    <!-- Firebase SDK (Modules) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Ta configuration Firebase intégrée
+        const firebaseConfig = {
+            apiKey: "AIzaSyDQ2qyBeT_iLuCF3UEmQ2S93z8Qlv6uJSI",
+            authDomain: "panier-malin-c8c25.firebaseapp.com",
+            projectId: "panier-malin-c8c25",
+            storageBucket: "panier-malin-c8c25.firebasestorage.app",
+            messagingSenderId: "372069346066",
+            appId: "1:372069346066:web:2ae414eff4b637ac5b21cb"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // On rend Firebase accessible globalement pour le script Babel
+        window.firebase = { auth, db, signInAnonymously, onAuthStateChanged, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp };
+    </script>
+
+    <!-- Application React -->
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // Composant Icône SVG intégré
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const icons = {
+                Plus: <path d="M12 5v14M5 12h14" />,
+                Minus: <path d="M5 12h14" />,
+                Trash2: <><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><path d="M10 11v6m4-6v6" /></>,
+                ShoppingCart: <><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></>,
+                TrendingUp: <path d="m22 7-8.5 8.5-5-5L2 17m14-10h6v6" />,
+                TrendingDown: <path d="m22 17-8.5-8.5-5 5L2 7m14 10h6v-6" />,
+                LayoutDashboard: <><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></>,
+                ListTodo: <><rect width="18" height="18" x="3" y="3" rx="2" /><path d="m9 10 2 2 4-4m-6 8h6" /></>,
+                Camera: <><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></>,
+                Upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m14-7-5-5-5 5m5-5v12" /></>,
+                Loader2: <path d="M21 12a9 9 0 1 1-6.219-8.56" />,
+                CheckCircle2: <><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" /><path d="m9 12 2 2 4-4" /></>,
+                AlertCircle: <><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></>,
+                X: <path d="M18 6 6 18M6 6l12 12" />,
+                Cloud: <path d="M17.5 19c3.037 0 5.5-2.463 5.5-5.5 0-2.799-2.078-5.112-4.781-5.446C17.417 4.881 14.72 3 12 3 9.432 3 7.154 4.604 6.273 6.945A5 5 0 0 0 2 11.5c0 2.761 2.239 5 5 5h10.5" />,
+                PieChart: <><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></>,
+                Calendar: <><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></>,
+                Wallet: <><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" /></>,
+                History: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5m4 4V7" /></>,
+                ShieldCheck: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4" />,
+                Download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3" />,
+                RefreshCw: <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8m0 0V3m0 5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16m0 0v5m0-5h5" />,
+                Lightbulb: <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5m-3 4h6m-5 4h4" />,
+                ArrowUpRight: <path d="M7 7h10v10M7 17 17 7" />
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${className} ${name === 'Loader2' ? 'animate-spin' : ''}`}>
+                    {icons[name]}
+                </svg>
+            );
+        };
+
+        const apiKey = "AIzaSyAuArHz7LW2h9qF78k2fEEjBhEagPDOtjI"; 
+        const appId = "panier-malin-prod";
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('inventory'); 
+            const [products, setProducts] = useState([]);
+            const [receipts, setReceipts] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [syncStatus, setSyncStatus] = useState('synced');
+            const [isScanning, setIsScanning] = useState(false);
+            const [scanResult, setScanResult] = useState(null);
+            const [error, setError] = useState(null);
+            const [newItem, setNewItem] = useState({ name: '', price: '', category: 'Épicerie' });
+
+            const categories = ['Fruits & Légumes', 'Crèmerie', 'Épicerie', 'Boucherie', 'Hygiène', 'Boissons', 'Autre'];
+
+            useEffect(() => {
+                const { auth, onAuthStateChanged, signInAnonymously } = window.firebase;
+                signInAnonymously(auth).catch(e => console.error(e));
+                return onAuthStateChanged(auth, u => { setUser(u); if(!u) setLoading(false); });
+            }, []);
+
+            useEffect(() => {
+                if (!user) return;
+                const { db, collection, onSnapshot } = window.firebase;
+                const unsubProd = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'products'), (snap) => {
+                    const items = []; snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+                    setProducts(items); setLoading(false);
+                }, () => { setLoading(false); setSyncStatus('error'); });
+                const unsubRec = onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'receipts'), (snap) => {
+                    const items = []; snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+                    setReceipts(items);
+                }, () => setSyncStatus('error'));
+                return () => { unsubProd(); unsubRec(); };
+            }, [user]);
+
+            const dbOp = async (action) => {
+                setSyncStatus('syncing');
+                try { await action(); setSyncStatus('synced'); } catch (e) { setSyncStatus('error'); }
+            };
+
+            const handleUpdate = (id, fields) => {
+                const { db, doc, updateDoc } = window.firebase;
+                dbOp(() => updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'products', id), fields));
+            };
+
+            const handleSave = (p) => {
+                const id = p.id || Date.now().toString();
+                const { db, doc, setDoc } = window.firebase;
+                dbOp(() => setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'products', id), { ...p, id }, { merge: true }));
+            };
+
+            const handleRecordPurchase = async (items, total) => {
+                if (!user || items.length === 0) return;
+                const { db, collection, addDoc, serverTimestamp } = window.firebase;
+                await dbOp(async () => {
+                    const breakdown = items.reduce((acc, curr) => {
+                        const cat = curr.category || 'Autre';
+                        acc[cat] = (acc[cat] || 0) + (curr.currentPrice * (curr.quantity || 1));
+                        return acc;
+                    }, {});
+                    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'receipts'), {
+                        date: new Date().toISOString(), timestamp: serverTimestamp(), total, itemCount: items.length, categoryBreakdown: breakdown
+                    });
+                    for (const item of items) handleUpdate(item.id, { isNeeded: false, quantity: 1 });
+                    setView('stats');
+                });
+            };
+
+            const handleScan = async (base64) => {
+                setIsScanning(true); setError(null);
+                const prompt = `Analyse ce ticket de caisse et extrais les articles en JSON: { "items": [{"name": "string", "price": number, "category": "string"}] }. Catégories autorisées: Fruits & Légumes, Crèmerie, Épicerie, Boucherie, Hygiène, Boissons, Autre.`;
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "image/png", data: base64.split(',')[1] } }] }], generationConfig: { responseMimeType: "application/json" } })
+                    });
+                    const result = await res.json();
+                    setScanResult(JSON.parse(result.candidates[0].content.parts[0].text).items);
+                } catch (e) { setError("L'analyse a échoué. Vérifiez l'image."); } finally { setIsScanning(false); }
+            };
+
+            const stats = useMemo(() => {
+                const now = new Date();
+                const curr = receipts.filter(r => { const d = new Date(r.date); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
+                const total = curr.reduce((s, r) => s + r.total, 0);
+                const byCat = curr.reduce((acc, r) => { Object.entries(r.categoryBreakdown || {}).forEach(([c, v]) => acc[c] = (acc[c] || 0) + v); return acc; }, {});
+                const alerts = products.filter(p => p.currentPrice > p.lastPrice).slice(0, 3);
+                return { total, byCat, receipts: curr, alerts };
+            }, [receipts, products]);
+
+            const shoppingList = useMemo(() => products.filter(p => p.isNeeded), [products]);
+            const shoppingTotal = useMemo(() => shoppingList.reduce((s, c) => s + (c.currentPrice * (c.quantity || 1)), 0), [shoppingList]);
+
+            if (loading) return (
+                <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
+                    <Icon name="Loader2" size={40} className="text-indigo-600 mb-4" />
+                    <p className="font-bold text-slate-400">Chargement de votre foyer...</p>
+                </div>
+            );
+
+            return (
+                <div className="pb-24 md:pb-0 md:pl-64 min-h-screen">
+                    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-50 md:top-0 md:bottom-0 md:w-64 md:flex-col md:justify-start md:border-t-0 md:border-r md:p-6 md:space-y-2">
+                        <div className="hidden md:flex items-center space-x-3 mb-10 px-2 text-indigo-600"><Icon name="ShoppingCart" size={24}/><h1 className="text-xl font-black text-slate-800">Panier Malin</h1></div>
+                        <NavItem active={view==='inventory'} onClick={()=>setView('inventory')} icon="LayoutDashboard" label="Catalogue" />
+                        <NavItem active={view==='shopping'} onClick={()=>setView('shopping')} icon="ListTodo" label="Ma Liste" badge={shoppingList.length} />
+                        <NavItem active={view==='scan'} onClick={()=>setView('scan')} icon="Camera" label="Scanner" />
+                        <NavItem active={view==='stats'} onClick={()=>setView('stats')} icon="PieChart" label="Stats" />
+                        <NavItem active={view==='settings'} onClick={()=>setView('settings')} icon="ShieldCheck" label="Sécurité" />
+                    </nav>
+
+                    <main className="p-4 md:p-10 max-w-5xl mx-auto animate-in">
+                        {view === 'inventory' && (
+                            <section className="space-y-6">
+                                <header className="flex justify-between items-center"><h2 className="text-3xl font-black text-slate-800">Catalogue</h2><button onClick={() => setView('scan')} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center shadow-lg"><Icon name="Camera" size={18} className="mr-2"/> Scanner</button></header>
+                                <div className="bg-white p-6 rounded-[2rem] border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4 shadow-sm">
+                                    <input type="text" placeholder="Nom" className="p-3 bg-slate-50 rounded-xl outline-none" value={newItem.name} onChange={e=>setNewItem({...newItem, name:e.target.value})} />
+                                    <input type="number" placeholder="Prix €" className="p-3 bg-slate-50 rounded-xl outline-none font-bold" value={newItem.price} onChange={e=>setNewItem({...newItem, price:e.target.value})} />
+                                    <select className="p-3 bg-slate-50 rounded-xl font-bold" value={newItem.category} onChange={e=>setNewItem({...newItem, category:e.target.value})}>{categories.map(c=><option key={c} value={c}>{c}</option>)}</select>
+                                    <button onClick={()=>{if(!newItem.name||!newItem.price)return; handleSave({...newItem, currentPrice:parseFloat(newItem.price), lastPrice:parseFloat(newItem.price), isNeeded:false, quantity:1}); setNewItem({name:'', price:'', category:'Épicerie'})}} className="bg-indigo-600 text-white font-black rounded-xl">Ajouter</button>
+                                </div>
+                                <div className="space-y-3">
+                                    {products.sort((a,b)=>a.name.localeCompare(b.name)).map(p => (
+                                        <div key={p.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between group shadow-sm">
+                                            <div className="flex items-center space-x-4">
+                                                <button onClick={()=>handleUpdate(p.id, {isNeeded: !p.isNeeded})} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${p.isNeeded ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-300'}`}><Icon name={p.isNeeded ? "CheckCircle2" : "Plus"} size={20}/></button>
+                                                <div><h4 className="font-bold text-slate-800">{p.name}</h4><div className="flex items-center space-x-2 text-[10px] font-black uppercase text-slate-400"><span>{p.category}</span> {p.currentPrice > p.lastPrice && <span className="text-red-500 flex items-center"><Icon name="TrendingUp" size={10} className="mr-1"/>+{((p.currentPrice-p.lastPrice)/p.lastPrice*100).toFixed(0)}%</span>}</div></div>
+                                            </div>
+                                            <div className="flex items-center space-x-4"><input type="number" step="0.01" className="w-16 text-right font-black bg-slate-50 p-2 rounded-lg outline-none" defaultValue={p.currentPrice} onBlur={e=>handleUpdate(p.id, {lastPrice:p.currentPrice, currentPrice:parseFloat(e.target.value)})} /><button onClick={()=>{const {db,doc,deleteDoc}=window.firebase; dbOp(()=>deleteDoc(doc(db,'artifacts',appId,'users',user.uid,'products',p.id)))}} className="text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><Icon name="Trash2" size={18}/></button></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+                        {view === 'shopping' && (
+                            <section className="space-y-8">
+                                <header className="flex justify-between items-end"><h2 className="text-3xl font-black text-slate-800">Ma Liste</h2><div className="bg-indigo-600 text-white p-6 rounded-3xl shadow-xl text-right"><p className="text-[10px] font-black opacity-70 uppercase mb-1">Total Estimé</p><p className="text-3xl font-black">{shoppingTotal.toFixed(2)} €</p></div></header>
+                                <div className="bg-white rounded-[2.5rem] shadow-lg border border-slate-100 overflow-hidden divide-y divide-slate-50">
+                                    {shoppingList.map(item => (
+                                        <div key={item.id} className="p-6 flex items-center justify-between">
+                                            <div className="flex items-center space-x-6 flex-1"><div className="flex items-center bg-slate-50 border border-slate-100 rounded-xl p-1"><button onClick={()=>handleUpdate(item.id, {quantity: Math.max(1, (item.quantity||1)-1)})} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm"><Icon name="Minus" size={14}/></button><span className="w-8 text-center font-black text-slate-800">{item.quantity||1}</span><button onClick={()=>handleUpdate(item.id, {quantity: (item.quantity||1)+1})} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm"><Icon name="Plus" size={14}/></button></div><span className="font-bold text-slate-800 text-xl">{item.name}</span></div>
+                                            <div className="font-black text-indigo-600 text-2xl">{(item.currentPrice * (item.quantity||1)).toFixed(2)} €</div>
+                                        </div>
+                                    ))}
+                                    {shoppingList.length > 0 ? <div className="p-8 bg-slate-50"><button onClick={()=>handleRecordPurchase(shoppingList, shoppingTotal)} className="w-full bg-indigo-600 text-white font-black py-6 rounded-3xl shadow-lg hover:bg-indigo-700 active:scale-95 transition-all text-lg uppercase tracking-widest">Valider mes achats</button></div> : <div className="p-20 text-center text-slate-400 italic font-medium">Le panier est vide.</div>}
+                                </div>
+                            </section>
+                        )}
+                        {view === 'stats' && (
+                            <section className="space-y-8">
+                                <header className="flex justify-between items-center"><h2 className="text-3xl font-black text-slate-800">Budget</h2><div className="bg-white px-4 py-2 rounded-xl border border-slate-200 font-bold flex items-center text-slate-500"><Icon name="Calendar" size={18} className="mr-2"/> Mars 2026</div></header>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-xl flex flex-col justify-center"><p className="text-xs font-black uppercase tracking-widest opacity-70 mb-2">Dépenses du mois</p><p className="text-5xl font-black tracking-tighter">{stats.total.toFixed(2)} €</p><p className="mt-4 font-bold text-xs bg-white/20 w-fit px-3 py-1 rounded-full">{stats.receipts.length} achats</p></div>
+                                    <div className="md:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm"><h3 className="font-bold text-slate-800 mb-6 flex items-center"><Icon name="PieChart" className="mr-2 text-indigo-600" size={24}/> Répartition par catégorie</h3><div className="space-y-5">{Object.entries(stats.byCat).length > 0 ? Object.entries(stats.byCat).sort((a,b)=>b[1]-a[1]).map(([c,v]) => (<div key={c} className="space-y-1"><div className="flex justify-between text-xs font-bold text-slate-500 uppercase"><span>{c}</span><span>{v.toFixed(2)}€</span></div><div className="h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full transition-all" style={{width:`${(v/stats.total*100)}%`}}></div></div></div>)) : <p className="text-slate-400 italic text-center py-10">Aucune donnée disponible.</p>}</div></div>
+                                </div>
+                            </section>
+                        )}
+                        {view === 'scan' && (
+                            <section className="space-y-8">
+                                <h2 className="text-3xl font-black text-slate-800">Analyse Ticket</h2>
+                                {!scanResult && !isScanning && (<div className="bg-white p-16 rounded-[3rem] border-2 border-dashed border-slate-200 text-center flex flex-col items-center"><div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[1.5rem] flex items-center justify-center mb-6 shadow-inner"><Icon name="Upload" size={32}/></div><label className="bg-indigo-600 text-white font-black py-4 px-10 rounded-2xl cursor-pointer shadow-lg active:scale-95 transition-all">Choisir la photo<input type="file" className="hidden" accept="image/*" onChange={e=>{const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onloadend=()=>handleScan(r.result); r.readAsDataURL(f);}} /></label></div>)}
+                                {isScanning && <div className="p-20 text-center"><Icon name="Loader2" className="text-indigo-600 mx-auto mb-4" size={48}/><p className="font-black text-slate-400">Gemini déchiffre votre ticket...</p></div>}
+                                {scanResult && (
+                                    <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden animate-in"><div className="p-8 bg-green-50 flex justify-between items-center text-green-800"><span className="font-black text-xl">{scanResult.length} Articles détectés</span><button onClick={()=>setScanResult(null)}><Icon name="X" size={20}/></button></div><div className="divide-y divide-slate-50 max-h-[400px] overflow-y-auto">{scanResult.map((it, i)=>(<div key={i} className="p-5 px-10 flex justify-between font-bold text-lg"><span>{it.name}</span><span className="bg-white px-3 py-1 rounded-xl border border-slate-200">{it.price.toFixed(2)}€</span></div>))}</div><div className="p-8 bg-slate-50 flex space-x-4"><button onClick={()=>setScanResult(null)} className="flex-1 bg-white border border-slate-200 py-5 rounded-2xl font-black">Annuler</button><button onClick={async ()=>{const total=scanResult.reduce((s,i)=>s+i.price,0); const {db,collection,addDoc,serverTimestamp}=window.firebase; await dbOp(async ()=>{await addDoc(collection(db,'artifacts',appId,'users',user.uid,'receipts'),{date:new Date().toISOString(),timestamp:serverTimestamp(),total,itemCount:scanResult.length,categoryBreakdown:scanResult.reduce((acc,curr)=>{const c=curr.category||'Autre'; acc[c]=(acc[c]||0)+curr.price; return acc;},{})}); for(const s of scanResult){const ex=products.find(p=>p.name.toLowerCase().includes(s.name.toLowerCase())); if(ex)handleUpdate(ex.id,{lastPrice:ex.currentPrice,currentPrice:s.price}); else handleSave({...s,currentPrice:s.price,lastPrice:s.price,isNeeded:false,quantity:1});} setScanResult(null); setView('inventory');});}} className="flex-1 bg-green-600 text-white py-5 rounded-2xl font-black shadow-lg">Synchroniser</button></div></div>
+                                )}
+                            </section>
+                        )}
+                        {view === 'settings' && (
+                            <section className="space-y-8">
+                                <h2 className="text-3xl font-black text-slate-800">Données & Sécurité</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden"><div className="w-14 h-14 bg-green-100 text-green-600 rounded-[1.5rem] flex items-center justify-center mb-6"><Icon name="Cloud" size={32} /></div><h3 className="text-2xl font-black mb-3">Sauvegarde Cloud</h3><p className="text-slate-500 mb-8 text-sm">Vos données sont sécurisées sur Firebase.</p><div className="flex items-center text-xs font-black text-green-600 bg-green-50 px-4 py-2 rounded-xl w-fit"><Icon name="CheckCircle2" size={16} className="mr-2"/> Status: Connecté</div></div><div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm"><div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-[1.5rem] flex items-center justify-center mb-6"><Icon name="Download" size={32} /></div><h3 className="text-2xl font-black mb-3">Export Manuel</h3><button onClick={()=>{const data={products,receipts}; const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download="panier-malin.json"; a.click();}} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black shadow-lg">Exporter JSON</button></div></div>
+                            </section>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        const NavItem = ({active, onClick, icon, label, badge}) => (
+            <button onClick={onClick} className={`flex flex-col items-center md:flex-row md:space-x-3 p-3 rounded-2xl transition-all ${active ? 'text-indigo-600 bg-indigo-50 font-bold shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}>
+                <div className="relative"><Icon name={icon} size={24} />{badge > 0 && <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center border-2 border-white font-bold">{badge}</span>}</div>
+                <span className="text-[10px] md:text-base mt-1 md:mt-0 font-medium">{label}</span>
+            </button>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
