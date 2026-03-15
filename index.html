@@ -174,6 +174,7 @@
         const [newItem, setNewItem]   = useState({name:'', price:'', store:''});
         const [search, setSearch]     = useState('');
         const [quickItem, setQuickItem]   = useState('');
+        const [listSearch, setListSearch] = useState('');
         const [expandedId, setExpandedId] = useState(null);
         const [cleaning, setCleaning]     = useState(false);
         const [cleanPreview, setCleanPreview] = useState(null);
@@ -332,6 +333,8 @@
             return months;
         }, [receipts]);
         const shopByStore = useMemo(() => { const g={}; shopList.forEach(p=>{ const k=p.store||''; if(!g[k])g[k]=[]; g[k].push(p); }); return Object.entries(g).sort(([a],[b])=>a===''?1:b===''?-1:a.localeCompare(b)); }, [shopList]);
+        const shopByStoreFiltered = useMemo(() => { if (!listSearch.trim()) return shopByStore; const q=listSearch.toLowerCase(); return shopByStore.map(([s,items])=>[s,items.filter(i=>i.name.toLowerCase().includes(q))]).filter(([,items])=>items.length>0); }, [shopByStore, listSearch]);
+        const topProducts = useMemo(() => [...products].filter(p=>!p.oneshot).sort((a,b)=>(b.priceHistory||[]).length-(a.priceHistory||[]).length).slice(0,8), [products]);
         const filteredCat = useMemo(() => { let r=products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())); if(activeCat) r=r.filter(p=>p.category===activeCat); return r.sort((a,b)=>a.name.localeCompare(b.name)); }, [products,search,activeCat]);
 
         if (loading) return (
@@ -436,6 +439,20 @@
                                 </div>
                             </div>
                         )}
+                        {topProducts.length>0 && (
+                            <div className="fu3">
+                                <div className="st">Les + achetés</div>
+                                <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+                                    {topProducts.map(p=>(
+                                        <button key={p.id} onClick={()=>{ upd(p.id,{isNeeded:true,quantity:1}); setView('liste'); }} style={{display:'flex',alignItems:'center',gap:6,background:p.isNeeded?'var(--acl)':'#fff',border:'1.5px solid',borderColor:p.isNeeded?'var(--ac)':'var(--bdl)',borderRadius:20,padding:'6px 12px',fontSize:13,fontWeight:500,cursor:'pointer',boxShadow:'var(--sh)'}}>
+                                            {p.store && <StoreBadge store={p.store}/>}
+                                            <span style={{color:p.isNeeded?'var(--ac)':'var(--tx)'}}>{p.name}</span>
+                                            {p.currentPrice>0 && <span style={{fontFamily:'DM Mono',fontSize:11,color:p.isNeeded?'var(--ac)':'var(--mu)'}}>{fmt(p.currentPrice)}€</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <div className="st" style={{marginTop:4}}>Compte</div>
                             <div className="card" style={{padding:14, display:'flex', alignItems:'center', gap:12}}>
@@ -510,7 +527,29 @@
                         )}
                         <div className="card" style={{overflow:'hidden'}}>
                             {filteredCat.length===0 && <div className="em"><div className="ei"><Ico n="tag" s={24} c="var(--bd)"/></div>Aucun produit</div>}
-                            {filteredCat.map(p => {
+                            {!activeCat && !search && CATS.filter(c=>filteredCat.some(p=>p.category===c)).map(cat => (
+                                <div key={cat}>
+                                    <div className="st" style={{padding:'8px 4px 2px', marginBottom:0}}>{cat}</div>
+                                    <div className="card" style={{overflow:'hidden'}}>
+                                        {filteredCat.filter(p=>p.category===cat).map(p => {
+                                            const d=calcDelta(p.currentPrice,p.lastPrice); const up=d&&parseFloat(d)>0; const isExp=expandedId===p.id; const hist=p.priceHistory||[];
+                                            return (<div key={p.id}><div className="row" style={{flexWrap:'wrap'}}><button className={"chk "+(p.isNeeded?'on':'')} onClick={()=>upd(p.id,{isNeeded:!p.isNeeded})}>{p.isNeeded&&<Ico n="chk" s={13} c="white"/>}</button>{p.store&&<StoreBadge store={p.store}/>}<span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--tx)':'var(--tx2)',cursor:'pointer',paddingLeft:p.store?6:0}} onClick={()=>setExpandedId(isExp?null:p.id)}>{p.name}</span>{d&&<span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}<input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...hist,{price:p.currentPrice,date:new Date().toISOString()}]});}}/><button className="db" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button></div>{isExp&&hist.length>0&&(<div style={{padding:'8px 16px 12px',borderTop:'1px solid var(--bdl)',background:'var(--sf2)',display:'flex',alignItems:'center',gap:16}}><Sparkline data={[...hist,{price:p.currentPrice,date:new Date().toISOString()}]} w={90} h={28}/><div style={{display:'flex',flexDirection:'column',gap:2,flex:1}}>{[...hist].reverse().slice(0,3).map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--mu)'}}><span>{new Date(h.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><span style={{fontFamily:'DM Mono'}}>{fmt(h.price)} €</span></div>))}</div></div>)}</div>);
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                            {(!activeCat && !search && filteredCat.filter(p=>!p.category).length>0) && (
+                                <div>
+                                    <div className="st" style={{padding:'8px 4px 2px', marginBottom:0}}>Sans catégorie</div>
+                                    <div className="card" style={{overflow:'hidden'}}>
+                                        {filteredCat.filter(p=>!p.category).map(p => {
+                                            const d=calcDelta(p.currentPrice,p.lastPrice); const up=d&&parseFloat(d)>0; const isExp=expandedId===p.id; const hist=p.priceHistory||[];
+                                            return (<div key={p.id}><div className="row" style={{flexWrap:'wrap'}}><button className={"chk "+(p.isNeeded?'on':'')} onClick={()=>upd(p.id,{isNeeded:!p.isNeeded})}>{p.isNeeded&&<Ico n="chk" s={13} c="white"/>}</button>{p.store&&<StoreBadge store={p.store}/>}<span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--tx)':'var(--tx2)',cursor:'pointer',paddingLeft:p.store?6:0}} onClick={()=>setExpandedId(isExp?null:p.id)}>{p.name}</span>{p.category&&<span style={{fontSize:10,fontWeight:600,color:'var(--mu)',background:'var(--sf2)',borderRadius:10,padding:'2px 7px'}}>{p.category}</span>}{d&&<span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}<input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...hist,{price:p.currentPrice,date:new Date().toISOString()}]});}}/><button className="db" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button></div>{isExp&&hist.length>0&&(<div style={{padding:'8px 16px 12px',borderTop:'1px solid var(--bdl)',background:'var(--sf2)',display:'flex',alignItems:'center',gap:16}}><Sparkline data={[...hist,{price:p.currentPrice,date:new Date().toISOString()}]} w={90} h={28}/><div style={{display:'flex',flexDirection:'column',gap:2,flex:1}}>{[...hist].reverse().slice(0,3).map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--mu)'}}><span>{new Date(h.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><span style={{fontFamily:'DM Mono'}}>{fmt(h.price)} €</span></div>))}</div></div>)}</div>);
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                            {(activeCat || search) && filteredCat.map(p => {
                                 const d = calcDelta(p.currentPrice, p.lastPrice);
                                 const up = d && parseFloat(d) > 0;
                                 const isExp = expandedId === p.id;
@@ -567,15 +606,30 @@
                                 }}>Terminer</button>
                             )}
                         </div>
-                        <div className="card" style={{padding:12, display:'flex', gap:8}}>
+                        <div style={{display:'flex', gap:8}}>
                             <input className="inp" placeholder="Ajouter un article rapide…" value={quickItem} onChange={e=>setQuickItem(e.target.value)}
                                 onKeyDown={e=>{ if(e.key==='Enter'&&quickItem.trim()){ save({name:quickItem.trim(),currentPrice:0,lastPrice:0,isNeeded:true,quantity:1,priceHistory:[],oneshot:true}); setQuickItem(''); } }}
                                 style={{flex:1}}
                             />
                             <button className="bp" style={{padding:'10px 16px', fontSize:20, lineHeight:1}} onClick={()=>{ if(!quickItem.trim()) return; save({name:quickItem.trim(),currentPrice:0,lastPrice:0,isNeeded:true,quantity:1,priceHistory:[],oneshot:true}); setQuickItem(''); }}>+</button>
                         </div>
-                        {shopList.length===0 && <div className="card"><div className="em"><div className="ei"><Ico n="list" s={24} c="var(--bd)"/></div>Coche des produits dans le catalogue<br/><span style={{fontSize:12}}>ou ajoute un article rapide ci-dessus</span></div></div>}
-                        {shopByStore.map(([store, items]) => (
+                        {shopList.length>0 && <input className="inp" placeholder="Rechercher dans la liste…" value={listSearch} onChange={e=>setListSearch(e.target.value)} style={{fontSize:13}}/>}
+                        {topProducts.filter(p=>!p.isNeeded).length>0 && shopList.length===0 && (
+                            <div>
+                                <div className="st">Les + achetés</div>
+                                <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+                                    {topProducts.filter(p=>!p.isNeeded).map(p=>(
+                                        <button key={p.id} onClick={()=>upd(p.id,{isNeeded:true,quantity:1})} style={{display:'flex',alignItems:'center',gap:6,background:'#fff',border:'1.5px solid var(--bdl)',borderRadius:20,padding:'6px 12px',fontSize:13,fontWeight:500,cursor:'pointer',boxShadow:'var(--sh)'}}>
+                                            {p.store && <StoreBadge store={p.store}/>}
+                                            <span>{p.name}</span>
+                                            {p.currentPrice>0 && <span style={{fontFamily:'DM Mono',fontSize:11,color:'var(--mu)'}}>{fmt(p.currentPrice)}€</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {shopList.length===0 && topProducts.filter(p=>!p.isNeeded).length===0 && <div className="card"><div className="em"><div className="ei"><Ico n="list" s={24} c="var(--bd)"/></div>Coche des produits dans le catalogue<br/><span style={{fontSize:12}}>ou ajoute un article rapide ci-dessus</span></div></div>}
+                        {shopByStoreFiltered.map(([store, items]) => (
                             <div key={store}>
                                 {store && <div style={{display:'flex', alignItems:'center', gap:8, padding:'8px 4px 4px'}}><StoreBadge store={store}/><span style={{fontSize:11, fontWeight:700, letterSpacing:'.06em', textTransform:'uppercase', color:'var(--mu)'}}>{store}</span></div>}
                                 <div className="card" style={{overflow:'hidden'}}>
