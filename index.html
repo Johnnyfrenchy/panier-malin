@@ -138,32 +138,56 @@
         return <svg xmlns="http://www.w3.org/2000/svg" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{p[n]}</svg>;
     };
 
+
+    const STORE_COLORS = {'ca':'#0072CE','le':'#E5001B','li':'#0050AA','al':'#00529B','in':'#E52222','mo':'#111','fr':'#E52222','su':'#00843D','pi':'#003189','ma':'#E8002D'};
+    const storeColor = s => { if (!s) return '#8e8e9a'; const k = s.slice(0,2).toLowerCase(); return STORE_COLORS[k] || ['#3b6ef5','#e03a3a','#1a9e6a','#f59e0b','#8b5cf6','#06b6d4'][s.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%6]; };
+    const StoreBadge = ({store}) => !store ? null : (
+        <span title={store} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:22,height:22,borderRadius:6,background:storeColor(store),color:'#fff',fontSize:9,fontWeight:800,flexShrink:0,letterSpacing:'-.01em',textTransform:'uppercase'}}>
+            {store.slice(0,2)}
+        </span>
+    );
+
+    const CATS = ['Épicerie','Frais','Boissons','Surgelés','Fruits & Légumes','Hygiène','Maison','Autre'];
+
+    const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').trim();
+    const similarity = (a,b) => { const wa=new Set(normalize(a).split(/\s+/).filter(w=>w.length>2)); const wb=new Set(normalize(b).split(/\s+/).filter(w=>w.length>2)); const inter=[...wa].filter(w=>wb.has(w)).length; const union=new Set([...wa,...wb]).size; return union>0?inter/union:0; };
+
+    const Sparkline = ({data, w=100, h=28}) => {
+        if (!data||data.length<2) return null;
+        const vals=[...data].map(d=>d.price);
+        const mn=Math.min(...vals), mx=Math.max(...vals), rng=mx-mn||1;
+        const pts=vals.map((v,i)=>i/(vals.length-1)*w+','+(h-(v-mn)/rng*(h-4)+2)).join(' ');
+        const up=vals[vals.length-1]>=vals[0];
+        return <svg width={w} height={h} style={{overflow:'visible'}}><polyline points={pts} fill="none" stroke={up?'var(--up)':'var(--dn)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+    };
+
     const App = () => {
         const [user, setUser]         = useState(null);
-        const [familyId, setFamilyId] = useState(null);
         const [view, setView]         = useState('accueil');
         const [products, setProducts] = useState([]);
         const [receipts, setReceipts] = useState([]);
         const [loading, setLoading]   = useState(true);
         const [scanning, setScanning] = useState(false);
+        const [scanStore, setScanStore] = useState('');
         const [result, setResult]     = useState(null);
         const [preview, setPreview]   = useState(null);
-        const [newItem, setNewItem]   = useState({name:'', price:''});
+        const [newItem, setNewItem]   = useState({name:'', price:'', store:''});
         const [search, setSearch]     = useState('');
-        const [shareInput, setShareInput] = useState('');
+        const [quickItem, setQuickItem]   = useState('');
+        const [expandedId, setExpandedId] = useState(null);
+        const [activeCat, setActiveCat]   = useState('');
+        const [monthlyBudget, setMonthlyBudget] = useState(() => parseFloat(localStorage.getItem('pm-budget') || '0'));
         const fileRef = useRef();
+        const camRef  = useRef();
 
         useEffect(() => {
             if (!window.firebase) return;
             const { auth, onAuthStateChanged } = window.firebase;
             return onAuthStateChanged(auth, u => {
                 if (u) {
-                    const stored = localStorage.getItem('panier-family-' + u.uid);
-                    setFamilyId(stored || u.uid);
                     setUser(u);
                 } else {
                     setUser(null);
-                    setFamilyId(null);
                     setLoading(false);
                 }
             });
@@ -175,15 +199,17 @@
             try { await signInWithPopup(auth, provider); } catch(e) { console.error(e); }
         };
 
+        const saveBudget = v => { const n=parseFloat(v)||0; localStorage.setItem('pm-budget',n); setMonthlyBudget(n); };
+
         const signOut = async () => {
             const { auth, signOut: fbSignOut } = window.firebase;
             try { await fbSignOut(auth); } catch(e) { console.error(e); }
         };
 
         useEffect(() => {
-            if (!user || !familyId || !window.firebase) return;
+            if (!user || !window.firebase) return;
             const { db, collection, onSnapshot } = window.firebase;
-            const base = 'artifacts/' + APP_ID + '/users/' + familyId;
+            const base = 'artifacts/' + APP_ID + '/users/' + user.uid;
             const u1 = onSnapshot(collection(db, base, 'products'), snap => {
                 setProducts(snap.docs.map(d => ({id: d.id, ...d.data()})));
                 setLoading(false);
@@ -192,15 +218,15 @@
                 setReceipts(snap.docs.map(d => ({id: d.id, ...d.data()})));
             });
             return () => { u1(); u2(); };
-        }, [user, familyId]);
+        }, [user]);
 
-        const ref  = (...p) => window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', familyId, ...p);
+        const ref  = (...p) => window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, ...p);
         const upd  = (id, f) => window.firebase.updateDoc(ref('products', id), f);
         const del  = id => window.firebase.deleteDoc(ref('products', id));
         const save = p => { const id = p.id || Date.now().toString(); window.firebase.setDoc(ref('products', id), {...p, id}, {merge: true}); };
         const addRec = d => {
             const { db, collection, addDoc, serverTimestamp } = window.firebase;
-            return addDoc(collection(db, 'artifacts', APP_ID, 'users', familyId, 'receipts'), {...d, timestamp: serverTimestamp()});
+            return addDoc(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'receipts'), {...d, timestamp: serverTimestamp()});
         };
 
         const resize = file => new Promise(resolve => {
@@ -222,7 +248,7 @@
             setScanning(true); setPreview(URL.createObjectURL(file)); setResult(null);
             try {
                 const b64 = await resize(file);
-                const prompt = `Tu analyses un ticket de caisse français. Extrais UNIQUEMENT les produits achetés. IGNORE remises, totaux, TVA, garanties, lignes négatives. Nettoie les noms (max 4 mots, sans codes). Prix unitaire positif uniquement. JSON: { "items": [ { "name": "...", "price": 0.00 } ] }`;
+                const prompt = `Tu analyses un ticket de caisse français. Extrais: 1) Le nom du magasin/enseigne (Carrefour, Lidl, Leclerc, Intermarché...) visible en haut du ticket. 2) Les produits achetés UNIQUEMENT. IGNORE remises, totaux, TVA, garanties, lignes négatives. Nettoie les noms (max 4 mots, sans codes). Prix unitaire positif uniquement.`;
                 const res = await fetch('/api/gemini', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -230,7 +256,7 @@
                         contents: [{parts: [{text: prompt}, {inlineData: {mimeType: "image/jpeg", data: b64.split(',')[1]}}]}],
                         generationConfig: {
                             responseMimeType: "application/json",
-                            responseSchema: {type:"OBJECT", properties:{items:{type:"ARRAY", items:{type:"OBJECT", properties:{name:{type:"STRING"}, price:{type:"NUMBER"}}, required:["name","price"]}}}, required:["items"]}
+                            responseSchema: {type:"OBJECT", properties:{store:{type:"STRING"}, items:{type:"ARRAY", items:{type:"OBJECT", properties:{name:{type:"STRING"}, price:{type:"NUMBER"}}, required:["name","price"]}}}, required:["store","items"]}
                         }
                     })
                 });
@@ -238,6 +264,7 @@
                 if (!res.ok) throw new Error(data.error?.message || 'Erreur API');
                 const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
                 setResult(parsed.items.filter(i => i.price > 0));
+                setScanStore(parsed.store || '');
             } catch(err) { alert("Erreur : " + (err.message || "Photo trop floue.")); }
             finally { setScanning(false); }
         };
@@ -246,11 +273,11 @@
             const total = result.reduce((s,i) => s+i.price, 0);
             await addRec({date: new Date().toISOString(), total, itemCount: result.length});
             for (const s of result) {
-                const m = products.find(p => p.name.toLowerCase().includes(s.name.toLowerCase().slice(0,6)) || s.name.toLowerCase().includes(p.name.toLowerCase().slice(0,6)));
-                if (m) upd(m.id, {lastPrice: m.currentPrice, currentPrice: s.price, priceHistory: [...(m.priceHistory||[]), {price: m.currentPrice, date: new Date().toISOString()}]});
-                else save({name: s.name, currentPrice: s.price, lastPrice: s.price, isNeeded: false, quantity: 1, priceHistory: []});
+                const m = products.find(p => similarity(p.name, s.name) >= 0.35);
+                if (m) upd(m.id, {lastPrice: m.currentPrice, currentPrice: s.price, priceHistory: [...(m.priceHistory||[]), {price: m.currentPrice, date: new Date().toISOString()}], ...(scanStore && {store: scanStore})});
+                else save({name: s.name, currentPrice: s.price, lastPrice: s.price, isNeeded: false, quantity: 1, priceHistory: [], store: scanStore});
             }
-            setResult(null); setPreview(null); setView('catalogue');
+            setResult(null); setPreview(null); setScanStore(''); setView('catalogue');
         };
 
         const now = new Date();
@@ -262,8 +289,11 @@
         const mCount    = useMemo(() => receipts.filter(r => { const d=new Date(r.date); return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); }).length, [receipts]);
         const filtered  = useMemo(() => products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name)), [products, search]);
         const changed   = useMemo(() => products.filter(p => p.lastPrice && p.lastPrice!==p.currentPrice).sort((a,b) => Math.abs(parseFloat(calcDelta(b.currentPrice,b.lastPrice)||0)) - Math.abs(parseFloat(calcDelta(a.currentPrice,a.lastPrice)||0))), [products]);
+        const priceAlerts = useMemo(() => products.filter(p => { const d=calcDelta(p.currentPrice,p.lastPrice); return d&&parseFloat(d)>=5; }).sort((a,b)=>parseFloat(calcDelta(b.currentPrice,b.lastPrice)||0)-parseFloat(calcDelta(a.currentPrice,a.lastPrice)||0)), [products]);
+        const shopByStore = useMemo(() => { const g={}; shopList.forEach(p=>{ const k=p.store||''; if(!g[k])g[k]=[]; g[k].push(p); }); return Object.entries(g).sort(([a],[b])=>a===''?1:b===''?-1:a.localeCompare(b)); }, [shopList]);
+        const filteredCat = useMemo(() => { let r=products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())); if(activeCat) r=r.filter(p=>p.category===activeCat); return r.sort((a,b)=>a.name.localeCompare(b.name)); }, [products,search,activeCat]);
 
-        if (loading || (user && !familyId)) return (
+        if (loading) return (
             <div style={{height:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12}}>
                 <div style={{width:32, height:32, border:'2px solid #e4e4e8', borderTopColor:'#3b6ef5', borderRadius:'50%', animation:'spin .7s linear infinite'}}></div>
                 <span style={{color:'#8e8e9a', fontSize:13, fontWeight:500}}>Chargement…</span>
@@ -277,7 +307,7 @@
                 </div>
                 <div style={{textAlign:'center'}}>
                     <div style={{fontSize:30, fontWeight:800, letterSpacing:'-.03em', color:'var(--tx)'}}>Panier Malin</div>
-                    <div style={{color:'var(--mu)', marginTop:6, fontSize:15}}>Gérez vos courses en famille</div>
+                    <div style={{color:'var(--mu)', marginTop:6, fontSize:15}}>Gérez vos courses intelligemment</div>
                 </div>
                 <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, window.firebase.googleProvider).catch(e => alert('Connexion impossible : ' + e.message))} style={{background:'#fff', border:'1.5px solid var(--bd)', borderRadius:14, padding:'13px 22px', display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontWeight:600, fontSize:15, color:'var(--tx)', boxShadow:'var(--sh)', width:'100%', maxWidth:320, justifyContent:'center'}}>
                     <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
@@ -288,16 +318,22 @@
 
         return (
             <div style={{paddingBottom:76, minHeight:'100vh'}}>
-                <button onClick={signOut} style={{position:'fixed', top:12, right:12, zIndex:200, background:'var(--sf)', border:'1px solid var(--bd)', borderRadius:10, padding:'6px 12px', fontFamily:'Figtree,sans-serif', fontSize:12, fontWeight:600, color:'var(--mu)', cursor:'pointer', boxShadow:'var(--sh)'}} title="Se déconnecter">Déconnexion</button>
+                <button onClick={signOut} tabIndex={-1} style={{position:'fixed', top:12, right:12, zIndex:200, background:'var(--sf)', border:'1px solid var(--bd)', borderRadius:10, padding:'6px 12px', fontFamily:'Figtree,sans-serif', fontSize:12, fontWeight:600, color:'var(--mu)', cursor:'pointer', boxShadow:'var(--sh)'}} title="Se déconnecter">Déconnexion</button>
 
                 {view==='accueil' && (
                     <div style={{padding:'20px 16px', display:'flex', flexDirection:'column', gap:14}}>
                         <div className="hero fu">
                             <div style={{fontSize:11, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', opacity:.75, marginBottom:6}}>{now.toLocaleString('fr-FR',{month:'long',year:'numeric'})}</div>
-                            <div className="ha">{fmt(mTotal)} €</div>
-                            <div style={{marginTop:14, display:'flex', gap:8, flexWrap:'wrap'}}>
+                            <div className="ha">{fmt(mTotal)} €{monthlyBudget>0 && <span style={{fontSize:16, fontWeight:500, opacity:.7}}> / {fmt(monthlyBudget)} €</span>}</div>
+                            {monthlyBudget>0 && (
+                                <div style={{marginTop:10, background:'rgba(255,255,255,.2)', borderRadius:6, height:6, overflow:'hidden'}}>
+                                    <div style={{height:'100%', borderRadius:6, background: mTotal/monthlyBudget>0.9?'#ff6b6b':'#fff', width:Math.min(100,mTotal/monthlyBudget*100)+'%', transition:'width .4s'}}/>
+                                </div>
+                            )}
+                            <div style={{marginTop:10, display:'flex', gap:8, flexWrap:'wrap'}}>
                                 <span className="pl"><Ico n="rec" s={12} c="white"/> {mCount} ticket{mCount>1?'s':''}</span>
                                 {mDelta!==null && <span className="pl"><Ico n={parseFloat(mDelta)>=0?'tup':'tdn'} s={12} c="white"/>{parseFloat(mDelta)>=0?'+':''}{mDelta}% vs mois dernier</span>}
+                                {monthlyBudget>0 && <span className="pl" style={{background:mTotal/monthlyBudget>0.9?'rgba(255,107,107,.35)':'rgba(255,255,255,.15)'}}>{Math.round(mTotal/monthlyBudget*100)}% du budget</span>}
                             </div>
                         </div>
                         <div className="fu1" style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
@@ -310,6 +346,21 @@
                                 <div><div style={{fontWeight:700, fontSize:14}}>Ma liste</div><div style={{fontSize:12, color:'var(--mu)', marginTop:1}}>{shopList.length>0 ? shopList.length+' articles' : 'Vide'}</div></div>
                             </button>
                         </div>
+                        {priceAlerts.length>0 && (
+                            <div className="fu1" style={{background:'#fff8f0', border:'1px solid #fde8cc', borderRadius:16, padding:'12px 14px'}}>
+                                <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:8}}>
+                                    <span style={{fontSize:16}}>⚠️</span>
+                                    <span style={{fontWeight:700, fontSize:13, color:'#c45c00'}}>{priceAlerts.length} produit{priceAlerts.length>1?'s':''} en hausse de +5% ou plus</span>
+                                </div>
+                                {priceAlerts.slice(0,3).map(p => {
+                                    const d=calcDelta(p.currentPrice,p.lastPrice);
+                                    return <div key={p.id} style={{display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--tx2)', padding:'3px 0'}}>
+                                        <span style={{flex:1}}>{p.name}</span>
+                                        <span style={{fontFamily:'DM Mono', color:'var(--up)', fontWeight:600}}>+{d}%</span>
+                                    </div>;
+                                })}
+                            </div>
+                        )}
                         {changed.length>0 && (
                             <div className="fu2">
                                 <div className="st">Variations récentes</div>
@@ -345,33 +396,14 @@
                             </div>
                         )}
                         <div>
-                            <div className="st" style={{marginTop:4}}>Famille</div>
-                            <div className="card" style={{padding:16, display:'flex', flexDirection:'column', gap:12}}>
-                                <div style={{display:'flex', alignItems:'center', gap:10}}>
-                                    {user.photoURL && <img src={user.photoURL} style={{width:34, height:34, borderRadius:'50%'}} alt=""/>}
-                                    <div style={{flex:1, minWidth:0}}>
-                                        <div style={{fontWeight:600, fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{user.displayName || user.email}</div>
-                                        <div style={{fontSize:11, color:'var(--mu)'}}>{familyId===user.uid ? 'Données personnelles' : <span style={{color:'var(--dn)', fontWeight:600}}>✓ Partage actif</span>}</div>
-                                    </div>
-                                    <button className="bs" style={{fontSize:11, padding:'6px 10px', flexShrink:0}} onClick={() => window.firebase.signOut(window.firebase.auth)}>Déco.</button>
+                            <div className="st" style={{marginTop:4}}>Compte</div>
+                            <div className="card" style={{padding:14, display:'flex', alignItems:'center', gap:12}}>
+                                {user.photoURL && <img src={user.photoURL} style={{width:38, height:38, borderRadius:'50%', flexShrink:0}} alt=""/>}
+                                <div style={{flex:1, minWidth:0}}>
+                                    <div style={{fontWeight:600, fontSize:14, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{user.displayName || user.email}</div>
+                                    <div style={{fontSize:12, color:'var(--mu)', marginTop:2}}>{user.email}</div>
                                 </div>
-                                {familyId===user.uid ? (
-                                    <div style={{display:'flex', flexDirection:'column', gap:8}}>
-                                        <div style={{fontSize:12, color:'var(--mu)'}}>Votre code à partager avec Mariana :</div>
-                                        <div style={{fontFamily:'DM Mono', fontSize:12, background:'var(--sf2)', padding:'8px 12px', borderRadius:8, letterSpacing:'.04em', wordBreak:'break-all'}}>{user.uid.slice(0,16)}</div>
-                                        <div style={{fontSize:12, color:'var(--mu)', marginTop:4}}>Ou entrez le code de Mariana :</div>
-                                        <div style={{display:'flex', gap:8}}>
-                                            <input className="inp" style={{fontSize:13}} placeholder="Code famille…" value={shareInput} onChange={e => setShareInput(e.target.value)}/>
-                                            <button className="bp" style={{whiteSpace:'nowrap', padding:'10px 14px'}} onClick={() => { const c=shareInput.trim(); if (c) { localStorage.setItem('panier-family-'+user.uid, c); setFamilyId(c); setShareInput(''); } }}>OK</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div style={{display:'flex', flexDirection:'column', gap:8}}>
-                                        <div style={{fontSize:12, color:'var(--mu)'}}>Données partagées — code :</div>
-                                        <div style={{fontFamily:'DM Mono', fontSize:12, background:'var(--dnb)', padding:'8px 12px', borderRadius:8, color:'var(--dn)', letterSpacing:'.04em', wordBreak:'break-all'}}>{familyId.slice(0,16)}</div>
-                                        <button className="bs" style={{fontSize:12, marginTop:4}} onClick={() => { localStorage.removeItem('panier-family-'+user.uid); setFamilyId(user.uid); }}>Revenir à mes données</button>
-                                    </div>
-                                )}
+                                <button className="bs" style={{fontSize:12, padding:'7px 12px', flexShrink:0}} onClick={() => window.firebase.signOut(window.firebase.auth)}>Déconnexion</button>
                             </div>
                         </div>
                     </div>
@@ -385,28 +417,63 @@
                         </div>
                         <div className="card" style={{padding:14, display:'flex', flexDirection:'column', gap:10}}>
                             <input className="inp" placeholder="Nom du produit" value={newItem.name} onChange={e => setNewItem({...newItem, name:e.target.value})}
-                                onKeyDown={e => { if (e.key==='Enter'&&newItem.name&&newItem.price) { save({name:newItem.name, currentPrice:parseFloat(newItem.price), lastPrice:parseFloat(newItem.price), isNeeded:false, quantity:1, priceHistory:[]}); setNewItem({name:'',price:''}); } }}
+                                onKeyDown={e => { if (e.key==='Enter'&&newItem.name&&newItem.price) { save({name:newItem.name, currentPrice:parseFloat(newItem.price), lastPrice:parseFloat(newItem.price), isNeeded:false, quantity:1, priceHistory:[], store:newItem.store}); setNewItem({name:'',price:'',store:''}); } }}
                             />
                             <div style={{display:'flex', gap:8}}>
                                 <input className="inp" type="number" step="0.01" placeholder="Prix €" value={newItem.price} onChange={e => setNewItem({...newItem, price:e.target.value})} style={{flex:1}}/>
-                                <button className="bp" onClick={() => { if (!newItem.name||!newItem.price) return; save({name:newItem.name, currentPrice:parseFloat(newItem.price), lastPrice:parseFloat(newItem.price), isNeeded:false, quantity:1, priceHistory:[]}); setNewItem({name:'',price:''}); }}>Ajouter</button>
+                                <div style={{display:'flex', alignItems:'center', gap:6, flex:1, background:'var(--sf2)', borderRadius:12, padding:'0 10px', border:'1.5px solid transparent'}}>
+                                    <StoreBadge store={newItem.store}/>
+                                    <input className="inp" placeholder="Magasin" value={newItem.store} onChange={e => setNewItem({...newItem, store:e.target.value})} list="stores-datalist" style={{background:'none', border:'none', borderRadius:0, padding:'10px 0', fontSize:13, flex:1}}/>
+                                </div>
                             </div>
+                            <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                                {CATS.map(c => <button key={c} onClick={()=>setNewItem({...newItem,category:c})} style={{fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, border:'1.5px solid', borderColor:newItem.category===c?'var(--ac)':'var(--bd)', background:newItem.category===c?'var(--acl)':'transparent', color:newItem.category===c?'var(--ac)':'var(--mu)', cursor:'pointer'}}>{c}</button>)}
+                            </div>
+                            <button className="bp" onClick={() => { if (!newItem.name||!newItem.price) return; save({name:newItem.name, currentPrice:parseFloat(newItem.price), lastPrice:parseFloat(newItem.price), isNeeded:false, quantity:1, priceHistory:[], store:newItem.store, category:newItem.category||''}); setNewItem({name:'',price:'',store:'',category:''}); }}>Ajouter</button>
+                            <datalist id="stores-datalist">
+                                {['Carrefour','Leclerc','Lidl','Aldi','Intermarché','Casino','Monoprix','Franprix','Super U','Picard','Biocoop','Grand Frais'].map(s => <option key={s} value={s}/>)}
+                            </datalist>
                         </div>
-                        {products.length>4 && <input className="inp" placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)}/>}
+                        <input className="inp" placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)}/>
+                        {CATS.filter(c=>products.some(p=>p.category===c)).length>0 && (
+                            <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                                <button onClick={()=>setActiveCat('')} style={{fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, border:'1.5px solid', borderColor:activeCat===''?'var(--ac)':'var(--bd)', background:activeCat===''?'var(--acl)':'transparent', color:activeCat===''?'var(--ac)':'var(--mu)', cursor:'pointer'}}>Tous</button>
+                                {CATS.filter(c=>products.some(p=>p.category===c)).map(c=><button key={c} onClick={()=>setActiveCat(activeCat===c?'':c)} style={{fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, border:'1.5px solid', borderColor:activeCat===c?'var(--ac)':'var(--bd)', background:activeCat===c?'var(--acl)':'transparent', color:activeCat===c?'var(--ac)':'var(--mu)', cursor:'pointer'}}>{c}</button>)}
+                            </div>
+                        )}
                         <div className="card" style={{overflow:'hidden'}}>
-                            {filtered.length===0 && <div className="em"><div className="ei"><Ico n="tag" s={24} c="var(--bd)"/></div>Aucun produit</div>}
-                            {filtered.map(p => {
+                            {filteredCat.length===0 && <div className="em"><div className="ei"><Ico n="tag" s={24} c="var(--bd)"/></div>Aucun produit</div>}
+                            {filteredCat.map(p => {
                                 const d = calcDelta(p.currentPrice, p.lastPrice);
                                 const up = d && parseFloat(d) > 0;
+                                const isExp = expandedId === p.id;
+                                const hist = p.priceHistory||[];
                                 return (
-                                    <div className="row" key={p.id}>
-                                        <button className={"chk "+(p.isNeeded?'on':'')} onClick={() => upd(p.id, {isNeeded:!p.isNeeded})}>{p.isNeeded && <Ico n="chk" s={13} c="white"/>}</button>
-                                        <span style={{flex:1, fontSize:14, fontWeight:500, color:p.isNeeded?'var(--tx)':'var(--tx2)'}}>{p.name}</span>
-                                        {d && <span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}
-                                        <input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice}
-                                            onBlur={e => { const v=parseFloat(e.target.value); if (!isNaN(v)&&v!==p.currentPrice) upd(p.id, {lastPrice:p.currentPrice, currentPrice:v, priceHistory:[...(p.priceHistory||[]),{price:p.currentPrice,date:new Date().toISOString()}]}); }}
-                                        />
-                                        <button className="db" onClick={() => { if (confirm('Supprimer ?')) del(p.id); }}><Ico n="trash" s={15}/></button>
+                                    <div key={p.id}>
+                                        <div className="row" style={{flexWrap:'wrap'}}>
+                                            <button className={"chk "+(p.isNeeded?'on':'')} onClick={() => upd(p.id, {isNeeded:!p.isNeeded})}>{p.isNeeded && <Ico n="chk" s={13} c="white"/>}</button>
+                                            {p.store && <StoreBadge store={p.store}/>}
+                                            <span style={{flex:1, fontSize:14, fontWeight:500, color:p.isNeeded?'var(--tx)':'var(--tx2)', cursor:'pointer', paddingLeft:p.store?6:0}} onClick={()=>setExpandedId(isExp?null:p.id)}>{p.name}</span>
+                                            {p.category && <span style={{fontSize:10, fontWeight:600, color:'var(--mu)', background:'var(--sf2)', borderRadius:10, padding:'2px 7px'}}>{p.category}</span>}
+                                            {d && <span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}
+                                            <input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice}
+                                                onBlur={e => { const v=parseFloat(e.target.value); if (!isNaN(v)&&v!==p.currentPrice) upd(p.id, {lastPrice:p.currentPrice, currentPrice:v, priceHistory:[...hist,{price:p.currentPrice,date:new Date().toISOString()}]}); }}
+                                            />
+                                            <button className="db" onClick={() => { if (confirm('Supprimer ?')) del(p.id); }}><Ico n="trash" s={15}/></button>
+                                        </div>
+                                        {isExp && hist.length>0 && (
+                                            <div style={{padding:'8px 16px 12px', borderTop:'1px solid var(--bdl)', background:'var(--sf2)', display:'flex', alignItems:'center', gap:16}}>
+                                                <Sparkline data={[...hist,{price:p.currentPrice,date:new Date().toISOString()}]} w={90} h={28}/>
+                                                <div style={{display:'flex', flexDirection:'column', gap:2, flex:1}}>
+                                                    {[...hist].reverse().slice(0,3).map((h,i)=>(
+                                                        <div key={i} style={{display:'flex', justifyContent:'space-between', fontSize:11, color:'var(--mu)'}}>
+                                                            <span>{new Date(h.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span>
+                                                            <span style={{fontFamily:'DM Mono'}}>{fmt(h.price)} €</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -433,20 +500,33 @@
                                 }}>Terminer</button>
                             )}
                         </div>
-                        <div className="card" style={{overflow:'hidden'}}>
-                            {shopList.length===0 && <div className="em"><div className="ei"><Ico n="list" s={24} c="var(--bd)"/></div>Coche des produits dans le catalogue</div>}
-                            {shopList.map(it => (
-                                <div className="row" key={it.id}>
-                                    <div className="qty">
-                                        <button className="qb" onClick={() => upd(it.id, {quantity:Math.max(1,(it.quantity||1)-1)})}><Ico n="minus" s={13}/></button>
-                                        <span className="qv">{it.quantity||1}</span>
-                                        <button className="qb" onClick={() => upd(it.id, {quantity:(it.quantity||1)+1})}><Ico n="plus" s={13}/></button>
-                                    </div>
-                                    <span style={{flex:1, fontSize:14, fontWeight:500, paddingLeft:8}}>{it.name}</span>
-                                    <span style={{fontFamily:'DM Mono', fontSize:14, color:'var(--ac)', fontWeight:500}}>{fmt(it.currentPrice*(it.quantity||1))} €</span>
-                                </div>
-                            ))}
+                        <div className="card" style={{padding:12, display:'flex', gap:8}}>
+                            <input className="inp" placeholder="Ajouter un article rapide…" value={quickItem} onChange={e=>setQuickItem(e.target.value)}
+                                onKeyDown={e=>{ if(e.key==='Enter'&&quickItem.trim()){ save({name:quickItem.trim(),currentPrice:0,lastPrice:0,isNeeded:true,quantity:1,priceHistory:[],oneshot:true}); setQuickItem(''); } }}
+                                style={{flex:1}}
+                            />
+                            <button className="bp" style={{padding:'10px 16px', fontSize:20, lineHeight:1}} onClick={()=>{ if(!quickItem.trim()) return; save({name:quickItem.trim(),currentPrice:0,lastPrice:0,isNeeded:true,quantity:1,priceHistory:[],oneshot:true}); setQuickItem(''); }}>+</button>
                         </div>
+                        {shopList.length===0 && <div className="card"><div className="em"><div className="ei"><Ico n="list" s={24} c="var(--bd)"/></div>Coche des produits dans le catalogue<br/><span style={{fontSize:12}}>ou ajoute un article rapide ci-dessus</span></div></div>}
+                        {shopByStore.map(([store, items]) => (
+                            <div key={store}>
+                                {store && <div style={{display:'flex', alignItems:'center', gap:8, padding:'8px 4px 4px'}}><StoreBadge store={store}/><span style={{fontSize:11, fontWeight:700, letterSpacing:'.06em', textTransform:'uppercase', color:'var(--mu)'}}>{store}</span></div>}
+                                <div className="card" style={{overflow:'hidden'}}>
+                                    {items.map(it => (
+                                        <div className="row" key={it.id}>
+                                            <div className="qty">
+                                                <button className="qb" onClick={()=>upd(it.id,{quantity:Math.max(1,(it.quantity||1)-1)})}><Ico n="minus" s={13}/></button>
+                                                <span className="qv">{it.quantity||1}</span>
+                                                <button className="qb" onClick={()=>upd(it.id,{quantity:(it.quantity||1)+1})}><Ico n="plus" s={13}/></button>
+                                            </div>
+                                            <span style={{flex:1, fontSize:14, fontWeight:500, paddingLeft:8}}>{it.name}</span>
+                                            {it.currentPrice>0 && <span style={{fontFamily:'DM Mono', fontSize:14, color:'var(--ac)', fontWeight:500}}>{fmt(it.currentPrice*(it.quantity||1))} €</span>}
+                                            {it.oneshot && <button className="db" onClick={()=>del(it.id)}><Ico n="x" s={13}/></button>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
 
@@ -463,31 +543,63 @@
                             </div>
                         )}
                         {!result && !scanning && (
-                            <label className="sz">
-                                <div style={{width:64, height:64, borderRadius:18, background:'var(--acl)', display:'flex', alignItems:'center', justifyContent:'center'}}><Ico n="cam" s={28} c="var(--ac)"/></div>
-                                <div style={{textAlign:'center'}}>
-                                    <div style={{fontWeight:700, fontSize:15, marginBottom:3}}>{preview?'Changer de ticket':'Choisir un ticket'}</div>
-                                    <div style={{fontSize:13, color:'var(--mu)'}}>Photo ou galerie</div>
-                                </div>
-                                <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={onFile}/>
-                            </label>
+                            <div style={{display:'flex', gap:10}}>
+                                <label style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:10, background:'#fff', border:'1.5px dashed var(--ac)', borderRadius:16, padding:'20px 12px', cursor:'pointer'}}>
+                                    <div style={{width:52, height:52, borderRadius:14, background:'var(--acl)', display:'flex', alignItems:'center', justifyContent:'center'}}><Ico n="cam" s={24} c="var(--ac)"/></div>
+                                    <div style={{textAlign:'center'}}>
+                                        <div style={{fontWeight:700, fontSize:13}}>Caméra</div>
+                                        <div style={{fontSize:11, color:'var(--mu)', marginTop:1}}>Photo directe</div>
+                                    </div>
+                                    <input ref={camRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={onFile}/>
+                                </label>
+                                <label style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:10, background:'#fff', border:'1.5px dashed var(--bd)', borderRadius:16, padding:'20px 12px', cursor:'pointer'}}>
+                                    <div style={{width:52, height:52, borderRadius:14, background:'var(--sf2)', display:'flex', alignItems:'center', justifyContent:'center'}}><Ico n="list" s={24} c="var(--mu)"/></div>
+                                    <div style={{textAlign:'center'}}>
+                                        <div style={{fontWeight:700, fontSize:13}}>Galerie</div>
+                                        <div style={{fontSize:11, color:'var(--mu)', marginTop:1}}>Depuis les photos</div>
+                                    </div>
+                                    <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={onFile}/>
+                                </label>
+                            </div>
                         )}
                         {result && !scanning && (
                             <div className="card fu" style={{overflow:'hidden'}}>
                                 <div style={{padding:'12px 16px', borderBottom:'1px solid var(--bdl)', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
                                     <div style={{display:'flex', alignItems:'center', gap:8}}><Ico n="ok" s={16} c="var(--dn)"/><span style={{fontWeight:700, fontSize:14}}>{result.length} articles détectés</span></div>
-                                    <button className="db" onClick={() => {setResult(null); setPreview(null);}}><Ico n="x" s={16}/></button>
+                                    <button className="db" onClick={() => {setResult(null); setPreview(null); setScanStore('');}}><Ico n="x" s={16}/></button>
                                 </div>
-                                <div style={{maxHeight:300, overflowY:'auto'}}>
+                                <div style={{padding:'10px 14px', borderBottom:'1px solid var(--bdl)', display:'flex', alignItems:'center', gap:8, background:'var(--sf2)'}}>
+                                    <StoreBadge store={scanStore}/>
+                                    <input
+                                        className="inp"
+                                        placeholder="Magasin détecté (modifiable)…"
+                                        value={scanStore}
+                                        onChange={e => setScanStore(e.target.value)}
+                                        list="stores-datalist"
+                                        style={{fontSize:13, padding:'7px 12px', flex:1, background:'#fff'}}
+                                    />
+                                </div>
+                                <div style={{maxHeight:280, overflowY:'auto'}}>
                                     {result.map((it,i) => (
-                                        <div className="si" key={i}>
-                                            <span style={{fontSize:13, color:'var(--tx2)', flex:1, paddingRight:12}}>{it.name}</span>
-                                            <span style={{fontFamily:'DM Mono', fontSize:13, color:'var(--ac)', fontWeight:500}}>{fmt(it.price)} €</span>
+                                        <div className="si" key={i} style={{gap:8, paddingRight:8}}>
+                                            <input
+                                                value={it.name}
+                                                onChange={e => { const r=[...result]; r[i]={...r[i],name:e.target.value}; setResult(r); }}
+                                                style={{flex:1, background:'none', border:'none', fontSize:13, color:'var(--tx2)', fontFamily:'Figtree,sans-serif', outline:'none', minWidth:0}}
+                                            />
+                                            <input
+                                                type="number" step="0.01"
+                                                value={it.price}
+                                                onChange={e => { const r=[...result]; r[i]={...r[i],price:parseFloat(e.target.value)||0}; setResult(r); }}
+                                                style={{width:60, fontFamily:'DM Mono', fontSize:13, color:'var(--ac)', fontWeight:500, background:'none', border:'none', outline:'none', textAlign:'right'}}
+                                            />
+                                            <span style={{fontSize:12, color:'var(--mu)'}}>€</span>
+                                            <button onClick={() => setResult(result.filter((_,j)=>j!==i))} style={{background:'none', border:'none', color:'var(--bd)', cursor:'pointer', padding:'2px 4px', flexShrink:0, display:'flex', alignItems:'center'}}><Ico n="x" s={13}/></button>
                                         </div>
                                     ))}
                                 </div>
                                 <div style={{padding:14, display:'flex', gap:8, borderTop:'1px solid var(--bdl)'}}>
-                                    <button className="bs" style={{flex:1}} onClick={() => {setResult(null); setPreview(null);}}>Annuler</button>
+                                    <button className="bs" style={{flex:1}} onClick={() => {setResult(null); setPreview(null); setScanStore('');}}>Annuler</button>
                                     <button className="bp" style={{flex:2}} onClick={importScan}>Importer dans le catalogue</button>
                                 </div>
                             </div>
@@ -497,13 +609,29 @@
 
                 {view==='budget' && (
                     <div className="fu" style={{padding:'20px 16px', display:'flex', flexDirection:'column', gap:12}}>
-                        <span className="pt">Budget</span>
+                        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                            <span className="pt">Budget</span>
+                            <div style={{display:'flex', alignItems:'center', gap:8}}>
+                                <span style={{fontSize:12, color:'var(--mu)'}}>Cible :</span>
+                                <input type="number" className="pi" placeholder="0" defaultValue={monthlyBudget||''}
+                                    onBlur={e=>saveBudget(e.target.value)}
+                                    style={{width:72, textAlign:'right', fontSize:13, background:'var(--sf2)', borderRadius:8, padding:'4px 8px'}}
+                                />
+                                <span style={{fontSize:12, color:'var(--mu)'}}>€/mois</span>
+                            </div>
+                        </div>
                         <div className="hero">
                             <div style={{fontSize:11, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', opacity:.75, marginBottom:6}}>{now.toLocaleString('fr-FR',{month:'long',year:'numeric'})}</div>
-                            <div className="ha">{fmt(mTotal)} €</div>
-                            <div style={{marginTop:14, display:'flex', gap:8, flexWrap:'wrap'}}>
+                            <div className="ha">{fmt(mTotal)} €{monthlyBudget>0 && <span style={{fontSize:16,fontWeight:500,opacity:.7}}> / {fmt(monthlyBudget)} €</span>}</div>
+                            {monthlyBudget>0 && (
+                                <div style={{margin:'10px 0 2px', background:'rgba(255,255,255,.2)', borderRadius:6, height:8, overflow:'hidden'}}>
+                                    <div style={{height:'100%', borderRadius:6, background:mTotal/monthlyBudget>0.9?'#ff6b6b':'#fff', width:Math.min(100,mTotal/monthlyBudget*100)+'%', transition:'width .4s'}}/>
+                                </div>
+                            )}
+                            <div style={{marginTop:10, display:'flex', gap:8, flexWrap:'wrap'}}>
                                 <span className="pl"><Ico n="rec" s={12} c="white"/> {mCount} ticket{mCount>1?'s':''}</span>
                                 {mDelta!==null && <span className="pl"><Ico n={parseFloat(mDelta)>=0?'tup':'tdn'} s={12} c="white"/>{parseFloat(mDelta)>=0?'+':''}{mDelta}% vs mois dernier</span>}
+                                {monthlyBudget>0 && <span className="pl" style={{background:mTotal/monthlyBudget>0.9?'rgba(255,107,107,.35)':'rgba(255,255,255,.15)'}}>{fmt(monthlyBudget-mTotal)} € restants</span>}
                             </div>
                         </div>
                         {receipts.length>0 && (
