@@ -290,6 +290,15 @@
         const filtered  = useMemo(() => products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name)), [products, search]);
         const changed   = useMemo(() => products.filter(p => p.lastPrice && p.lastPrice!==p.currentPrice).sort((a,b) => Math.abs(parseFloat(calcDelta(b.currentPrice,b.lastPrice)||0)) - Math.abs(parseFloat(calcDelta(a.currentPrice,a.lastPrice)||0))), [products]);
         const priceAlerts = useMemo(() => products.filter(p => { const d=calcDelta(p.currentPrice,p.lastPrice); return d&&parseFloat(d)>=5; }).sort((a,b)=>parseFloat(calcDelta(b.currentPrice,b.lastPrice)||0)-parseFloat(calcDelta(a.currentPrice,a.lastPrice)||0)), [products]);
+        const last6Months = useMemo(() => {
+            const months = [];
+            for (let i=5; i>=0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+                const total = receipts.filter(r => { const rd=new Date(r.date); return rd.getMonth()===d.getMonth()&&rd.getFullYear()===d.getFullYear(); }).reduce((s,r)=>s+(r.total||0),0);
+                months.push({ label: d.toLocaleString('fr-FR',{month:'short'}), month: d.getMonth(), year: d.getFullYear(), total, isCurrent: i===0 });
+            }
+            return months;
+        }, [receipts]);
         const shopByStore = useMemo(() => { const g={}; shopList.forEach(p=>{ const k=p.store||''; if(!g[k])g[k]=[]; g[k].push(p); }); return Object.entries(g).sort(([a],[b])=>a===''?1:b===''?-1:a.localeCompare(b)); }, [shopList]);
         const filteredCat = useMemo(() => { let r=products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())); if(activeCat) r=r.filter(p=>p.category===activeCat); return r.sort((a,b)=>a.name.localeCompare(b.name)); }, [products,search,activeCat]);
 
@@ -634,6 +643,42 @@
                                 {monthlyBudget>0 && <span className="pl" style={{background:mTotal/monthlyBudget>0.9?'rgba(255,107,107,.35)':'rgba(255,255,255,.15)'}}>{fmt(monthlyBudget-mTotal)} € restants</span>}
                             </div>
                         </div>
+                        {last6Months.some(m=>m.total>0) && (() => {
+                            const maxVal = Math.max(...last6Months.map(m=>m.total), monthlyBudget||0, 1);
+                            const W=44, GAP=8, H=90, PAD=8;
+                            const totalW = last6Months.length*(W+GAP)-GAP;
+                            return (
+                                <div className="card" style={{padding:'16px 16px 12px'}}>
+                                    <div className="st" style={{marginBottom:12}}>6 derniers mois</div>
+                                    <div style={{overflowX:'auto'}}>
+                                        <svg width={totalW+PAD*2} height={H+32} style={{display:'block', margin:'0 auto'}}>
+                                            {monthlyBudget>0 && (
+                                                <line
+                                                    x1={PAD} y1={H-(monthlyBudget/maxVal)*(H-8)+4}
+                                                    x2={totalW+PAD} y2={H-(monthlyBudget/maxVal)*(H-8)+4}
+                                                    stroke="rgba(59,110,245,.25)" strokeWidth="1.5" strokeDasharray="4,3"
+                                                />
+                                            )}
+                                            {last6Months.map((m,i) => {
+                                                const x = PAD+i*(W+GAP);
+                                                const barH = m.total>0 ? Math.max(4,(m.total/maxVal)*(H-8)) : 0;
+                                                const y = H-barH+4;
+                                                const over = monthlyBudget>0 && m.total>monthlyBudget;
+                                                const color = m.isCurrent ? 'var(--ac)' : over ? 'var(--up)' : '#c5d0f5';
+                                                return (
+                                                    <g key={i}>
+                                                        <rect x={x} y={y} width={W} height={barH} rx={6} fill={color}/>
+                                                        {m.total>0 && <text x={x+W/2} y={y-5} textAnchor="middle" fontSize="9" fontWeight="600" fill={m.isCurrent?'var(--ac)':over?'var(--up)':'var(--mu)'} fontFamily="DM Mono,monospace">{Math.round(m.total)}€</text>}
+                                                        <text x={x+W/2} y={H+18} textAnchor="middle" fontSize="10" fontWeight={m.isCurrent?700:500} fill={m.isCurrent?'var(--tx)':'var(--mu)'} fontFamily="Figtree,sans-serif" textTransform="capitalize">{m.label}</text>
+                                                    </g>
+                                                );
+                                            })}
+                                        </svg>
+                                    </div>
+                                    {monthlyBudget>0 && <div style={{display:'flex', alignItems:'center', gap:6, marginTop:4, justifyContent:'center'}}><div style={{width:20, height:2, background:'rgba(59,110,245,.4)', borderRadius:2, borderTop:'1.5px dashed rgba(59,110,245,.4)'}}/><span style={{fontSize:11, color:'var(--mu)'}}>Cible {fmt(monthlyBudget)} €</span></div>}
+                                </div>
+                            );
+                        })()}
                         {receipts.length>0 && (
                             <>
                                 <div className="st" style={{marginBottom:0}}>Historique</div>
