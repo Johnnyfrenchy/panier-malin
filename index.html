@@ -151,6 +151,22 @@
 
     const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').trim();
     const similarity = (a,b) => { const wa=new Set(normalize(a).split(/\s+/).filter(w=>w.length>2)); const wb=new Set(normalize(b).split(/\s+/).filter(w=>w.length>2)); const inter=[...wa].filter(w=>wb.has(w)).length; const union=new Set([...wa,...wb]).size; return union>0?inter/union:0; };
+    const parseUnit = (name, price) => {
+        if (!name || !price || price <= 0) return null;
+        const m = name.match(/(\d+(?:[.,]\d+)?)\s*(ml|cl|l|g|kg)\b/i);
+        if (!m) return null;
+        const qty = parseFloat(m[1].replace(',', '.'));
+        const unit = m[2].toLowerCase();
+        let qtyNorm;
+        if (unit==='ml') qtyNorm = qty / 1000;
+        else if (unit==='cl') qtyNorm = qty / 100;
+        else if (unit==='l') qtyNorm = qty;
+        else if (unit==='g') qtyNorm = qty / 1000;
+        else if (unit==='kg') qtyNorm = qty;
+        if (!qtyNorm || qtyNorm <= 0) return null;
+        const label = (unit==='ml'||unit==='cl'||unit==='l') ? '/L' : '/kg';
+        return { unitPrice: price / qtyNorm, label };
+    };
 
     const Sparkline = ({data, w=100, h=28}) => {
         if (!data||data.length<2) return null;
@@ -323,6 +339,19 @@
         const filtered  = useMemo(() => products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name)), [products, search]);
         const changed   = useMemo(() => products.filter(p => p.lastPrice && p.lastPrice!==p.currentPrice).sort((a,b) => Math.abs(parseFloat(calcDelta(b.currentPrice,b.lastPrice)||0)) - Math.abs(parseFloat(calcDelta(a.currentPrice,a.lastPrice)||0))), [products]);
         const priceAlerts = useMemo(() => products.filter(p => { const d=calcDelta(p.currentPrice,p.lastPrice); return d&&parseFloat(d)>=5; }).sort((a,b)=>parseFloat(calcDelta(b.currentPrice,b.lastPrice)||0)-parseFloat(calcDelta(a.currentPrice,a.lastPrice)||0)), [products]);
+        const unitComparisons = useMemo(() => {
+            const withUnit = products.filter(p=>p.store&&p.currentPrice>0).map(p=>({...p,up:parseUnit(p.name,p.currentPrice)})).filter(p=>p.up);
+            return products.reduce((acc,p) => {
+                if (!p.store || !p.currentPrice) return acc;
+                const up = parseUnit(p.name, p.currentPrice);
+                if (!up) return acc;
+                const similar = withUnit.filter(q=>q.id!==p.id&&q.store!==p.store&&q.up.label===up.label&&similarity(q.name,p.name)>=0.3);
+                if (!similar.length) return acc;
+                const best = similar.sort((a,b)=>a.up.unitPrice-b.up.unitPrice)[0];
+                if (best.up.unitPrice < up.unitPrice * 0.95) acc[p.id] = {store:best.store, unitPrice:best.up.unitPrice, label:best.up.label};
+                return acc;
+            }, {});
+        }, [products]);
         const last6Months = useMemo(() => {
             const months = [];
             for (let i=5; i>=0; i--) {
@@ -534,7 +563,7 @@
                                     <div className="card" style={{overflow:'hidden'}}>
                                         {filteredCat.filter(p=>p.category===cat).map(p => {
                                             const d=calcDelta(p.currentPrice,p.lastPrice); const up=d&&parseFloat(d)>0; const isExp=expandedId===p.id; const hist=p.priceHistory||[];
-                                            return (<div key={p.id}><div className="row" style={{flexWrap:'wrap'}}><button className={"chk "+(p.isNeeded?'on':'')} onClick={()=>upd(p.id,{isNeeded:!p.isNeeded})}>{p.isNeeded&&<Ico n="chk" s={13} c="white"/>}</button>{p.store&&<StoreBadge store={p.store}/>}<span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--tx)':'var(--tx2)',cursor:'pointer',paddingLeft:p.store?6:0}} onClick={()=>setExpandedId(isExp?null:p.id)}>{p.name}</span>{d&&<span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}<input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...hist,{price:p.currentPrice,date:new Date().toISOString()}]});}}/><button className="db" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button></div>{isExp&&(<div style={{padding:'8px 16px 12px',borderTop:'1px solid var(--bdl)',background:'var(--sf2)',display:'flex',flexDirection:'column',gap:8}}>{hist.length>0&&(<div style={{display:'flex',alignItems:'center',gap:16}}><Sparkline data={[...hist,{price:p.currentPrice,date:new Date().toISOString()}]} w={90} h={28}/><div style={{display:'flex',flexDirection:'column',gap:2,flex:1}}>{[...hist].reverse().slice(0,3).map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--mu)'}}><span>{new Date(h.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><span style={{fontFamily:'DM Mono'}}>{fmt(h.price)} €</span></div>))}</div></div>)}<input className="inp" placeholder="Note ou variante…" defaultValue={p.note||''} onBlur={e=>{if(e.target.value!==(p.note||''))upd(p.id,{note:e.target.value});}} style={{fontSize:12,padding:'6px 10px'}}/></div>)}</div>);
+                                            return (<div key={p.id}><div className="row" style={{flexWrap:'wrap'}}><button className={"chk "+(p.isNeeded?'on':'')} onClick={()=>upd(p.id,{isNeeded:!p.isNeeded})}>{p.isNeeded&&<Ico n="chk" s={13} c="white"/>}</button>{p.store&&<StoreBadge store={p.store}/>}<span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--tx)':'var(--tx2)',cursor:'pointer',paddingLeft:p.store?6:0}} onClick={()=>setExpandedId(isExp?null:p.id)}>{p.name}</span>{d&&<span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}<input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...hist,{price:p.currentPrice,date:new Date().toISOString()}]});}}/>{(()=>{const u=parseUnit(p.name,p.currentPrice);return u?<span style={{fontSize:10,color:'var(--mu)',fontFamily:'DM Mono',background:'var(--sf2)',borderRadius:6,padding:'2px 5px',whiteSpace:'nowrap'}}>{fmt(u.unitPrice)}{u.label}</span>:null;})()}<button className="db" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button></div>{isExp&&(<div style={{padding:'8px 16px 12px',borderTop:'1px solid var(--bdl)',background:'var(--sf2)',display:'flex',flexDirection:'column',gap:8}}>{hist.length>0&&(<div style={{display:'flex',alignItems:'center',gap:16}}><Sparkline data={[...hist,{price:p.currentPrice,date:new Date().toISOString()}]} w={90} h={28}/><div style={{display:'flex',flexDirection:'column',gap:2,flex:1}}>{[...hist].reverse().slice(0,3).map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--mu)'}}><span>{new Date(h.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><span style={{fontFamily:'DM Mono'}}>{fmt(h.price)} €</span></div>))}</div></div>)}<input className="inp" placeholder="Note ou variante…" defaultValue={p.note||''} onBlur={e=>{if(e.target.value!==(p.note||''))upd(p.id,{note:e.target.value});}} style={{fontSize:12,padding:'6px 10px'}}/></div>)}</div>);
                                         })}
                                     </div>
                                 </div>
@@ -545,7 +574,7 @@
                                     <div className="card" style={{overflow:'hidden'}}>
                                         {filteredCat.filter(p=>!p.category).map(p => {
                                             const d=calcDelta(p.currentPrice,p.lastPrice); const up=d&&parseFloat(d)>0; const isExp=expandedId===p.id; const hist=p.priceHistory||[];
-                                            return (<div key={p.id}><div className="row" style={{flexWrap:'wrap'}}><button className={"chk "+(p.isNeeded?'on':'')} onClick={()=>upd(p.id,{isNeeded:!p.isNeeded})}>{p.isNeeded&&<Ico n="chk" s={13} c="white"/>}</button>{p.store&&<StoreBadge store={p.store}/>}<span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--tx)':'var(--tx2)',cursor:'pointer',paddingLeft:p.store?6:0}} onClick={()=>setExpandedId(isExp?null:p.id)}>{p.name}</span>{p.category&&<span style={{fontSize:10,fontWeight:600,color:'var(--mu)',background:'var(--sf2)',borderRadius:10,padding:'2px 7px'}}>{p.category}</span>}{d&&<span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}<input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...hist,{price:p.currentPrice,date:new Date().toISOString()}]});}}/><button className="db" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button></div>{isExp&&(<div style={{padding:'8px 16px 12px',borderTop:'1px solid var(--bdl)',background:'var(--sf2)',display:'flex',flexDirection:'column',gap:8}}>{hist.length>0&&(<div style={{display:'flex',alignItems:'center',gap:16}}><Sparkline data={[...hist,{price:p.currentPrice,date:new Date().toISOString()}]} w={90} h={28}/><div style={{display:'flex',flexDirection:'column',gap:2,flex:1}}>{[...hist].reverse().slice(0,3).map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--mu)'}}><span>{new Date(h.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><span style={{fontFamily:'DM Mono'}}>{fmt(h.price)} €</span></div>))}</div></div>)}<input className="inp" placeholder="Note ou variante…" defaultValue={p.note||''} onBlur={e=>{if(e.target.value!==(p.note||''))upd(p.id,{note:e.target.value});}} style={{fontSize:12,padding:'6px 10px'}}/></div>)}</div>);
+                                            return (<div key={p.id}><div className="row" style={{flexWrap:'wrap'}}><button className={"chk "+(p.isNeeded?'on':'')} onClick={()=>upd(p.id,{isNeeded:!p.isNeeded})}>{p.isNeeded&&<Ico n="chk" s={13} c="white"/>}</button>{p.store&&<StoreBadge store={p.store}/>}<span style={{flex:1,fontSize:14,fontWeight:500,color:p.isNeeded?'var(--tx)':'var(--tx2)',cursor:'pointer',paddingLeft:p.store?6:0}} onClick={()=>setExpandedId(isExp?null:p.id)}>{p.name}</span>{p.category&&<span style={{fontSize:10,fontWeight:600,color:'var(--mu)',background:'var(--sf2)',borderRadius:10,padding:'2px 7px'}}>{p.category}</span>}{d&&<span className={"vb "+(up?'vup':'vdn')}>{up?'+':''}{d}%</span>}<input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v!==p.currentPrice)upd(p.id,{lastPrice:p.currentPrice,currentPrice:v,priceHistory:[...hist,{price:p.currentPrice,date:new Date().toISOString()}]});}}/>{(()=>{const u=parseUnit(p.name,p.currentPrice);return u?<span style={{fontSize:10,color:'var(--mu)',fontFamily:'DM Mono',background:'var(--sf2)',borderRadius:6,padding:'2px 5px',whiteSpace:'nowrap'}}>{fmt(u.unitPrice)}{u.label}</span>:null;})()}<button className="db" onClick={()=>{if(confirm('Supprimer ?'))del(p.id);}}><Ico n="trash" s={15}/></button></div>{isExp&&(<div style={{padding:'8px 16px 12px',borderTop:'1px solid var(--bdl)',background:'var(--sf2)',display:'flex',flexDirection:'column',gap:8}}>{hist.length>0&&(<div style={{display:'flex',alignItems:'center',gap:16}}><Sparkline data={[...hist,{price:p.currentPrice,date:new Date().toISOString()}]} w={90} h={28}/><div style={{display:'flex',flexDirection:'column',gap:2,flex:1}}>{[...hist].reverse().slice(0,3).map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--mu)'}}><span>{new Date(h.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><span style={{fontFamily:'DM Mono'}}>{fmt(h.price)} €</span></div>))}</div></div>)}<input className="inp" placeholder="Note ou variante…" defaultValue={p.note||''} onBlur={e=>{if(e.target.value!==(p.note||''))upd(p.id,{note:e.target.value});}} style={{fontSize:12,padding:'6px 10px'}}/></div>)}</div>);
                                         })}
                                     </div>
                                 </div>
@@ -566,6 +595,7 @@
                                             <input type="number" step="0.01" className="pi" defaultValue={p.currentPrice?.toFixed(2)} key={p.id+'-'+p.currentPrice}
                                                 onBlur={e => { const v=parseFloat(e.target.value); if (!isNaN(v)&&v!==p.currentPrice) upd(p.id, {lastPrice:p.currentPrice, currentPrice:v, priceHistory:[...hist,{price:p.currentPrice,date:new Date().toISOString()}]}); }}
                                             />
+                                            {(()=>{const u=parseUnit(p.name,p.currentPrice);return u?<span style={{fontSize:10,color:'var(--mu)',fontFamily:'DM Mono',background:'var(--sf2)',borderRadius:6,padding:'2px 5px',whiteSpace:'nowrap'}}>{fmt(u.unitPrice)}{u.label}</span>:null;})()}
                                             <button className="db" onClick={() => { if (confirm('Supprimer ?')) del(p.id); }}><Ico n="trash" s={15}/></button>
                                         </div>
                                         {isExp && (
@@ -581,6 +611,12 @@
                                                                 </div>
                                                             ))}
                                                         </div>
+                                                    </div>
+                                                )}
+                                                {unitComparisons[p.id] && (
+                                                    <div style={{display:'flex', alignItems:'center', gap:6, padding:'4px 8px', background:'rgba(230,170,50,.12)', borderRadius:8, border:'1px solid rgba(230,170,50,.3)'}}>
+                                                        <span style={{fontSize:11}}>💡</span>
+                                                        <span style={{fontSize:11, color:'#a07a00'}}>Moins cher chez <strong>{unitComparisons[p.id].store}</strong> : <span style={{fontFamily:'DM Mono'}}>{fmt(unitComparisons[p.id].unitPrice)}{unitComparisons[p.id].label}</span></span>
                                                     </div>
                                                 )}
                                                 <input className="inp" placeholder="Note ou variante…" defaultValue={p.note||''} onBlur={e=>{if(e.target.value!==(p.note||''))upd(p.id,{note:e.target.value});}} style={{fontSize:12,padding:'6px 10px'}}/>
@@ -650,7 +686,12 @@
                                                 <span style={{fontSize:14, fontWeight:500}}>{it.name}</span>
                                                 {it.note && <span style={{fontSize:11, color:'var(--mu)', fontStyle:'italic'}}>{it.note}</span>}
                                             </div>
-                                            {it.currentPrice>0 && <span style={{fontFamily:'DM Mono', fontSize:14, color:'var(--ac)', fontWeight:500}}>{fmt(it.currentPrice*(it.quantity||1))} €</span>}
+                                            {it.currentPrice>0 && (
+                                                <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', gap:1}}>
+                                                    <span style={{fontFamily:'DM Mono', fontSize:14, color:'var(--ac)', fontWeight:500}}>{fmt(it.currentPrice*(it.quantity||1))} €</span>
+                                                    {(()=>{const u=parseUnit(it.name,it.currentPrice);return u?<span style={{fontSize:10,color:'var(--mu)',fontFamily:'DM Mono'}}>{fmt(u.unitPrice)}{u.label}</span>:null;})()}
+                                                </div>
+                                            )}
                                             {it.oneshot && <button className="db" onClick={()=>del(it.id)}><Ico n="x" s={13}/></button>}
                                         </div>
                                     ))}
