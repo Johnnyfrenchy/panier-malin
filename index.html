@@ -175,6 +175,8 @@
         const [search, setSearch]     = useState('');
         const [quickItem, setQuickItem]   = useState('');
         const [expandedId, setExpandedId] = useState(null);
+        const [cleaning, setCleaning]     = useState(false);
+        const [cleanPreview, setCleanPreview] = useState(null);
         const [activeCat, setActiveCat]   = useState('');
         const [monthlyBudget, setMonthlyBudget] = useState(() => parseFloat(localStorage.getItem('pm-budget') || '0'));
         const fileRef = useRef();
@@ -200,6 +202,36 @@
         };
 
         const saveBudget = v => { const n=parseFloat(v)||0; localStorage.setItem('pm-budget',n); setMonthlyBudget(n); };
+
+        const cleanNames = async () => {
+            const dirty = products.filter(p => p.name === p.name.toUpperCase() || /[0-9]{3,}|[/\\]/.test(p.name));
+            if (!dirty.length) { alert('Aucun nom à nettoyer !'); return; }
+            setCleaning(true);
+            try {
+                const prompt = `Tu es un assistant qui nettoie des noms de produits de supermarché issus d'un OCR. Reformule chaque nom en français lisible (majuscule initiale, pas de codes, max 5 mots). Réponds UNIQUEMENT avec le JSON demandé.`;
+                const items = dirty.map((p,i) => `${i}: ${p.name}`).join('\n');
+                const res = await fetch('/api/gemini', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        contents: [{parts:[{text: prompt + '\n\nNoms à nettoyer:\n' + items}]}],
+                        generationConfig: {
+                            responseMimeType: 'application/json',
+                            responseSchema: {type:'OBJECT', properties:{names:{type:'ARRAY',items:{type:'OBJECT',properties:{index:{type:'NUMBER'},name:{type:'STRING'}},required:['index','name']}}},required:['names']}
+                        }
+                    })
+                });
+                const data = await res.json();
+                const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+                const preview = parsed.names.map(r => ({
+                    id: dirty[r.index]?.id,
+                    oldName: dirty[r.index]?.name,
+                    newName: r.name
+                })).filter(r => r.id && r.newName !== r.oldName);
+                setCleanPreview(preview);
+            } catch(e) { alert('Erreur : ' + e.message); }
+            finally { setCleaning(false); }
+        };
 
         const signOut = async () => {
             const { auth, signOut: fbSignOut } = window.firebase;
@@ -424,6 +456,26 @@
                             <span className="pt">Catalogue</span>
                             <span className="chip">{products.length} produits</span>
                         </div>
+                        {cleanPreview && (
+                            <div className="card fu" style={{overflow:'hidden', border:'1.5px solid var(--ac)'}}>
+                                <div style={{padding:'12px 16px', borderBottom:'1px solid var(--bdl)', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                                    <span style={{fontWeight:700, fontSize:14}}>✨ {cleanPreview.length} noms à corriger</span>
+                                    <button className="db" onClick={()=>setCleanPreview(null)}><Ico n="x" s={16}/></button>
+                                </div>
+                                <div style={{maxHeight:240, overflowY:'auto'}}>
+                                    {cleanPreview.map((p,i) => (
+                                        <div key={p.id} style={{padding:'8px 16px', borderBottom:'1px solid var(--bdl)', display:'flex', flexDirection:'column', gap:2}}>
+                                            <span style={{fontSize:11, color:'var(--mu)', textDecoration:'line-through'}}>{p.oldName}</span>
+                                            <input value={p.newName} onChange={e=>{const c=[...cleanPreview];c[i]={...c[i],newName:e.target.value};setCleanPreview(c);}} style={{fontSize:13,fontWeight:600,color:'var(--dn)',background:'none',border:'none',outline:'none',fontFamily:'Figtree,sans-serif'}}/>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{padding:12, display:'flex', gap:8, borderTop:'1px solid var(--bdl)'}}>
+                                    <button className="bs" style={{flex:1}} onClick={()=>setCleanPreview(null)}>Annuler</button>
+                                    <button className="bp" style={{flex:2}} onClick={async()=>{ for(const p of cleanPreview) await window.firebase.updateDoc(window.firebase.doc(window.firebase.db,'artifacts',APP_ID,'users',user.uid,'products',p.id),{name:p.newName}); setCleanPreview(null); }}>Appliquer</button>
+                                </div>
+                            </div>
+                        )}
                         <div className="card" style={{padding:14, display:'flex', flexDirection:'column', gap:10}}>
                             <input className="inp" placeholder="Nom du produit" value={newItem.name} onChange={e => setNewItem({...newItem, name:e.target.value})}
                                 onKeyDown={e => { if (e.key==='Enter'&&newItem.name&&newItem.price) { save({name:newItem.name, currentPrice:parseFloat(newItem.price), lastPrice:parseFloat(newItem.price), isNeeded:false, quantity:1, priceHistory:[], store:newItem.store}); setNewItem({name:'',price:'',store:''}); } }}
@@ -443,7 +495,13 @@
                                 {['Carrefour','Leclerc','Lidl','Aldi','Intermarché','Casino','Monoprix','Franprix','Super U','Picard','Biocoop','Grand Frais'].map(s => <option key={s} value={s}/>)}
                             </datalist>
                         </div>
-                        <input className="inp" placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)}/>
+                        <div style={{display:'flex', gap:8}}>
+                            <input className="inp" placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)} style={{flex:1}}/>
+                            <button className="bs" style={{fontSize:12, padding:'10px 14px', display:'flex', alignItems:'center', gap:5, flexShrink:0, whiteSpace:'nowrap'}} onClick={cleanNames} disabled={cleaning}>
+                                {cleaning ? <><div style={{width:11,height:11,border:'1.5px solid var(--bd)',borderTopColor:'var(--ac)',borderRadius:'50%',animation:'spin .7s linear infinite'}}/></> : '✨'}
+                                {cleaning ? 'Nettoyage…' : 'Nettoyer'}
+                            </button>
+                        </div>
                         {CATS.filter(c=>products.some(p=>p.category===c)).length>0 && (
                             <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
                                 <button onClick={()=>setActiveCat('')} style={{fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, border:'1.5px solid', borderColor:activeCat===''?'var(--ac)':'var(--bd)', background:activeCat===''?'var(--acl)':'transparent', color:activeCat===''?'var(--ac)':'var(--mu)', cursor:'pointer'}}>Tous</button>
