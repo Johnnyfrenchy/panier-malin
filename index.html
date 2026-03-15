@@ -140,7 +140,7 @@
 
 
     const STORE_COLORS = {'ca':'#0072CE','le':'#E5001B','li':'#0050AA','al':'#00529B','in':'#E52222','mo':'#111','fr':'#E52222','su':'#00843D','pi':'#003189','ma':'#E8002D'};
-    const storeColor = s => { if (!s) return '#8e8e9a'; const k = s.slice(0,2).toLowerCase(); return STORE_COLORS[k] || ['#3b6ef5','#e03a3a','#1a9e6a','#f59e0b','#8b5cf6','#06b6d4'][s.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%6]; };
+    const storeColor = s => { if (!s) return '#8e8e9a'; const k = s.slice(0,2).toLowerCase(); return STORE_COLORS[k] || ['#3b6ef5','#e03a3a','#1a9e6a','#f59e0b','#8b5cf6','#06b6d4'][k.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%6]; };
     const StoreBadge = ({store}) => !store ? null : (
         <span title={store} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:22,height:22,borderRadius:6,background:storeColor(store),color:'#fff',fontSize:9,fontWeight:800,flexShrink:0,letterSpacing:'-.01em',textTransform:'uppercase'}}>
             {store.slice(0,2)}
